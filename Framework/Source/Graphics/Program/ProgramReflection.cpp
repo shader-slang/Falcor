@@ -453,6 +453,12 @@ namespace Falcor
         return pArrayType;
     }
 
+    ReflectionType::SharedPtr reflectGenericTypeParameterType(TypeLayoutReflection* pSlangType, const ReflectionPath* pPath)
+    {
+        ReflectionGenericType::SharedPtr result = ReflectionGenericType::create(pSlangType->getName());
+        return result;
+    }
+
     ReflectionType::SharedPtr reflectBasicType(TypeLayoutReflection* pSlangType, const ReflectionPath* pPath)
     {
         ReflectionBasicType::Type type = getVariableType(pSlangType->getScalarType(), pSlangType->getRowCount(), pSlangType->getColumnCount());
@@ -476,6 +482,8 @@ namespace Falcor
             return reflectStructType(pSlangType, pPath);
         case TypeReflection::Kind::Array:
             return reflectArrayType(pSlangType, pPath);
+        case TypeReflection::Kind::GenericTypeParameter:
+            return reflectGenericTypeParameterType(pSlangType, pPath);
         default:
             return reflectBasicType(pSlangType, pPath);
         }
@@ -1137,6 +1145,11 @@ namespace Falcor
         return dynamic_cast<const ReflectionArrayType*>(this);
     }
 
+    const ReflectionGenericType * ReflectionType::asGenericType() const
+    {
+        return dynamic_cast<const ReflectionGenericType*>(this);
+    }
+
     const ReflectionType* ReflectionType::unwrapArray() const
     {
         const ReflectionType* pType = this;
@@ -1184,6 +1197,12 @@ namespace Falcor
                 extractOffsets(pType, offset + i * pArrayType->getArrayStride(), count, offsetMap);
                 --count;
             }
+            return;
+        }
+
+        const ReflectionGenericType* pGenericType = pType->asGenericType();
+        if (pGenericType)
+        {
             return;
         }
 
@@ -1251,6 +1270,18 @@ namespace Falcor
         const ReflectionArrayType* pOther = other.asArrayType();
         if (!pOther) return false;
         return (*this == *pOther);
+    }
+    
+    ReflectionGenericType::SharedPtr ReflectionGenericType::create(std::string inName)
+    {
+        return SharedPtr(new ReflectionGenericType(inName));
+    }
+
+    bool ReflectionGenericType::operator==(const ReflectionType& other) const
+    {
+        const ReflectionGenericType* pOther = other.asGenericType();
+        if (!pOther) return false;
+        return (name == pOther->name);
     }
 
     bool ReflectionResourceType::operator==(const ReflectionType& other) const

@@ -220,14 +220,18 @@ namespace Falcor
         // Vao must be valid so at least primitive topology is known
         assert(mpGraphicsState->getVao().get());
 
+        auto gso = mpGraphicsState->getGSO(mpGraphicsVars.get());
+        auto rootSignature = gso->getDesc().getProgramKernels()->getRootSignature();
+
+        if (mBindGraphicsRootSig)
+        {
+            rootSignature->bindForGraphics(this);
+            mBindGraphicsRootSig = false;
+        }
         // Apply the vars. Must be first because applyGraphicsVars() might cause a flush
         if (mpGraphicsVars)
         {
-            applyGraphicsVars();
-        }
-        else
-        {
-            mpLowLevelData->getCommandList()->SetGraphicsRootSignature(RootSignature::getEmpty()->getApiHandle());
+            applyGraphicsVars(rootSignature.get());
         }
 
 #if _ENABLE_NVAPI
@@ -240,15 +244,13 @@ namespace Falcor
         assert(mpGraphicsState->isSinglePassStereoEnabled() == false);
 #endif
 
-        mBindGraphicsRootSig = false;
-
         CommandListHandle pList = mpLowLevelData->getCommandList();
         pList->IASetPrimitiveTopology(getD3DPrimitiveTopology(mpGraphicsState->getVao()->getPrimitiveTopology()));
         D3D12SetVao(this, pList, mpGraphicsState->getVao().get());
         D3D12SetFbo(this, mpGraphicsState->getFbo().get());
         D3D12SetViewports(pList, &mpGraphicsState->getViewport(0));
         D3D12SetScissors(pList, &mpGraphicsState->getScissors(0));
-        pList->SetPipelineState(mpGraphicsState->getGSO(mpGraphicsVars.get())->getApiHandle());
+        pList->SetPipelineState(gso->getApiHandle());
         BlendState::SharedPtr blendState = mpGraphicsState->getBlendState();
         if (blendState != nullptr)
         {

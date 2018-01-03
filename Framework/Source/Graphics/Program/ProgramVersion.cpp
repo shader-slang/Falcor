@@ -32,7 +32,7 @@
 
 namespace Falcor
 {
-    ProgramKernels::ProgramKernels(const Shader::SharedPtr& pVS, const Shader::SharedPtr& pPS, const Shader::SharedPtr& pGS, const Shader::SharedPtr& pHS, const Shader::SharedPtr& pDS, const Shader::SharedPtr& pCS, const std::string& name) : mName(name)
+    ProgramKernels::ProgramKernels(const Shader::SharedPtr& pVS, const Shader::SharedPtr& pPS, const Shader::SharedPtr& pGS, const Shader::SharedPtr& pHS, const Shader::SharedPtr& pDS, const Shader::SharedPtr& pCS, const RootSignature::SharedPtr& pRootSignature, const std::string& name) : mName(name)
     {
         mpShaders[(uint32_t)ShaderType::Vertex] = pVS;
         mpShaders[(uint32_t)ShaderType::Pixel] = pPS;
@@ -40,6 +40,7 @@ namespace Falcor
         mpShaders[(uint32_t)ShaderType::Domain] = pDS;
         mpShaders[(uint32_t)ShaderType::Hull] = pHS;
         mpShaders[(uint32_t)ShaderType::Compute] = pCS;
+        mpRootSignature = pRootSignature;
     }
 
     ProgramKernels::SharedPtr ProgramKernels::create(
@@ -49,6 +50,7 @@ namespace Falcor
         const Shader::SharedPtr& pGS,
         const Shader::SharedPtr& pHS,
         const Shader::SharedPtr& pDS,
+        const RootSignature::SharedPtr& pRootSignature,
         std::string& log,
         const std::string& name)
     {
@@ -58,7 +60,7 @@ namespace Falcor
             log = "Program " + name + " doesn't contain a vertex-shader. This is illegal.";
             return nullptr;
         }
-        SharedPtr pProgram = SharedPtr(new ProgramKernels(pVS, pPS, pGS, pHS, pDS, nullptr, name));
+        SharedPtr pProgram = SharedPtr(new ProgramKernels(pVS, pPS, pGS, pHS, pDS, nullptr, pRootSignature, name));
 
         if(pProgram->init(log) == false)
         {
@@ -76,6 +78,7 @@ namespace Falcor
     ProgramKernels::SharedPtr ProgramKernels::create(
         ProgramReflection::SharedPtr const& pReflector,
         const Shader::SharedPtr& pCS,
+        const RootSignature::SharedPtr& pRootSignature,
         std::string& log,
         const std::string& name)
     {
@@ -85,7 +88,7 @@ namespace Falcor
             log = "Program " + name + " doesn't contain a compute-shader. This is illegal.";
             return nullptr;
         }
-        SharedPtr pProgram = SharedPtr(new ProgramKernels(nullptr, nullptr, nullptr, nullptr, nullptr, pCS, name));
+        SharedPtr pProgram = SharedPtr(new ProgramKernels(nullptr, nullptr, nullptr, nullptr, nullptr, pCS, pRootSignature, name));
 
         if (pProgram->init(log) == false)
         {

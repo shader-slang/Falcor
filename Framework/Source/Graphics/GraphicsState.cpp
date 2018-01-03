@@ -82,7 +82,7 @@ namespace Falcor
             mpGsoGraph->walk((void*)pProgramKernels.get());
         }
     
-        RootSignature::SharedPtr pRoot = pVars ? pVars->getRootSignature() : RootSignature::getEmpty();
+        RootSignature::SharedPtr pRoot = pProgramKernels ? pProgramKernels->getRootSignature() : RootSignature::getEmpty();
 
         if (mCachedData.pRootSig != pRoot.get())
         {

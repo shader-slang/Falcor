@@ -35,6 +35,11 @@
 
 __import Helpers;
 
+interface IMaterial
+{
+    void prepare(inout ShadingAttribs shAttrib);
+}
+
 /*******************************************************************
 Documentation
 *******************************************************************/
@@ -98,13 +103,52 @@ __import BSDFs;
 Material shading building blocks
 *******************************************************************/
 
+struct Material : IMaterial
+{
+    MaterialData material;
+
+    void prepare(inout ShadingAttribs shAttr)
+    {
+        /* Copy the input material parameters */
+#ifdef _MS_STATIC_MATERIAL_DESC
+        MaterialDesc desc = _MS_STATIC_MATERIAL_DESC;
+#else
+        MaterialDesc desc = material.desc;
+#endif
+
+        shAttr.preparedMat.values = material.values;
+        shAttr.preparedMat.desc = desc;
+
+        /* Evaluate alpha test material modifier */
+        applyAlphaTest(material, shAttr, shAttr.P);
+        shAttr.aoFactor = 1;
+
+        bool done = false;
+        $for(iLayer in Range(0, MatMaxLayers))
+        {
+            if (shAttr.preparedMat.desc.layers[iLayer].type == MatNone)
+                done = true;
+
+            if (!done)
+            {
+                shAttr.preparedMat.values.layers[iLayer].albedo =
+                    evalWithColor(desc.layers[iLayer].hasTexture, material.textures.layers[iLayer], material.samplerState, material.values.layers[iLayer].albedo, shAttr);
+            }
+        }
+
+        /* Perturb shading normal is needed */
+        perturbNormal(material, shAttr);
+    }
+};
+
 /**
 Prepares all light-independent attributes needed to perform shading at a hit point.
 This includes fetching all textures and computing final shading attributes, like albedo and roughness.
 After this step, one can save these shading attributes, e.g., in a G-Buffer to perform lighting afterwards.
 This routine also applies all material modifiers, like performs alpha test and applies a normal map.
 */
-void _fn prepareShadingAttribs(MaterialData material, in float3 P, in float3 camPos,
+
+void prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, in float3 camPos,
     in float3 normal, in float3 bitangent, in float2 uv,
 #ifdef _MS_USER_DERIVATIVES
     float2 dPdx, float2 dPdy,
@@ -127,57 +171,14 @@ void _fn prepareShadingAttribs(MaterialData material, in float3 P, in float3 cam
     shAttr.lodBias = lodBias;
 #endif
 
-
-    /* Copy the input material parameters */
-#ifdef _MS_STATIC_MATERIAL_DESC
-    MaterialDesc desc = _MS_STATIC_MATERIAL_DESC;
-#else
-    MaterialDesc desc = material.desc;
-#endif
-
-    shAttr.preparedMat.values = material.values;
-    shAttr.preparedMat.desc = desc;
-
-    /* Evaluate alpha test material modifier */
-    applyAlphaTest(material, shAttr, P);
-    shAttr.aoFactor = 1;
-
-    /* Prefetch textures */
-#if 0
-    loop_unroll
-    for(uint iLayer = 0 ; iLayer < MatMaxLayers ; iLayer++)
-    {
-        if(shAttr.preparedMat.desc.layers[iLayer].type == MatNone) break;
-
-        shAttr.preparedMat.values.layers[iLayer].albedo = 
-            evalWithColor(desc.layers[iLayer].hasTexture, material.textures.layers[iLayer], material.samplerState, material.values.layers[iLayer].albedo, shAttr);
-    }
-#else
-    // SLANG: need to explicitly unroll to make IR emit
-    // code that keeps fxc happy
-    bool done = false;
-    $for(iLayer in Range(0, MatMaxLayers))
-    {
-        if(shAttr.preparedMat.desc.layers[iLayer].type == MatNone)
-            done = true;
-
-        if( !done )
-        {
-            shAttr.preparedMat.values.layers[iLayer].albedo = 
-                evalWithColor(desc.layers[iLayer].hasTexture, material.textures.layers[iLayer], material.samplerState, material.values.layers[iLayer].albedo, shAttr);
-        }
-    }
-#endif
-
-    /* Perturb shading normal is needed */
-    perturbNormal(material, shAttr);
+    material.prepare(shAttr);
 }
 
 /**
 Another overload of PrepareShadingAttribs(), which does not require tangents.
 Instead it constructs a world-space axis-aligned tangent frame on the fly.
 */
-void _fn prepareShadingAttribs(MaterialData material, in float3 P, in float3 camPos,
+void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, in float3 camPos,
     in float3 normal, in float2 uv,
 #ifdef _MS_USER_DERIVATIVES
     float2 dPdx, float2 dPdy,
@@ -201,12 +202,12 @@ void _fn prepareShadingAttribs(MaterialData material, in float3 P, in float3 cam
 
 #ifndef _MS_USER_DERIVATIVES
 // Legacy version of prepareShadingAttribs() without LOD bias
-void _fn prepareShadingAttribs(MaterialData material, in float3 P, in float3 camPos, in float3 normal, in float2 uv, _ref(ShadingAttribs) shAttr)
+void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, in float3 camPos, in float3 normal, in float2 uv, _ref(ShadingAttribs) shAttr)
 {
     prepareShadingAttribs(material, P, camPos, normal, uv, 0, shAttr);
 }
 
-void _fn prepareShadingAttribs(MaterialData material, in float3 P, in float3 camPos, in float3 normal, in float3 bitangent, in float2 uv, _ref(ShadingAttribs) shAttr)
+void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, in float3 camPos, in float3 normal, in float3 bitangent, in float2 uv, _ref(ShadingAttribs) shAttr)
 {
     prepareShadingAttribs(material, P, camPos, normal, bitangent, uv, 0, shAttr);
 }
