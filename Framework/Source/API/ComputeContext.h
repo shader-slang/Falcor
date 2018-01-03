@@ -109,7 +109,7 @@ namespace Falcor
     protected:
         ComputeContext();
         void prepareForDispatch();
-        void applyComputeVars();
+        void applyComputeVars(RootSignature* rootSignature);
 
         std::stack<ComputeState::SharedPtr> mpComputeStateStack;
         std::stack<ComputeVars::SharedPtr> mpComputeVarsStack;

@@ -41,7 +41,8 @@ struct PS_OUT
 PS_OUT main(VS_OUT vOut)
 {
     ShadingAttribs shAttr;
-    prepareShadingAttribs(gMaterial, vOut.posW, gCam.position, vOut.normalW, vOut.texC, shAttr);
+    TMaterial mat = gMaterial;
+    prepareShadingAttribs(mat, vOut.posW, gCam.position, vOut.normalW, vOut.texC, shAttr);
 
     PS_OUT psOut;
     psOut.fragColor0 = float4(shAttr.P, 1);

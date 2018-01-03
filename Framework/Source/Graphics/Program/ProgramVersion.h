@@ -32,6 +32,7 @@
 #include <vector>
 #include "API/Shader.h"
 #include "Graphics/Program//ProgramReflection.h"
+#include "API/LowLevel/RootSignature.h"
 
 namespace Falcor
 {
@@ -65,6 +66,7 @@ namespace Falcor
             const Shader::SharedPtr& pGS,
             const Shader::SharedPtr& pHS,
             const Shader::SharedPtr& pDS,
+            const RootSignature::SharedPtr& pRootSignature,
             std::string& log, 
             const std::string& name = "");
 
@@ -77,6 +79,7 @@ namespace Falcor
         static SharedPtr create(
             ProgramReflection::SharedPtr const& pReflector,
             const Shader::SharedPtr& pCS,
+            const RootSignature::SharedPtr& pRootSignature,
             std::string& log,
             const std::string& name = "");
 
@@ -92,7 +95,17 @@ namespace Falcor
 
         /** Get the reflection object
         */
+
         ProgramReflection::SharedConstPtr getReflector() const { return mpReflector; }
+        
+        // SLANG-INTEGRATION
+        // move root signature to be a member of ProgramKernels
+        RootSignature::SharedPtr mpRootSignature;
+        RootSignature::SharedPtr getRootSignature() const
+        {
+            return mpRootSignature;
+        }
+
     protected:
         ProgramKernels(const Shader::SharedPtr& pVS,
             const Shader::SharedPtr& pPS,
@@ -100,6 +113,7 @@ namespace Falcor
             const Shader::SharedPtr& pHS,
             const Shader::SharedPtr& pDS,
             const Shader::SharedPtr& pCS,
+            const RootSignature::SharedPtr& pRootSignature,
             const std::string& name = "");
 
         virtual bool init(std::string& log);
@@ -109,7 +123,6 @@ namespace Falcor
 
         static const uint32_t kShaderCount = (uint32_t)ShaderType::Count;
         Shader::SharedConstPtr mpShaders[kShaderCount];
-
         ProgramReflection::SharedPtr mpReflector;
         void* mpPrivateData;
     };

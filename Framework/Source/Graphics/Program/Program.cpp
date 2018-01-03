@@ -342,7 +342,7 @@ namespace Falcor
         SlangCompileFlags slangFlags = 0;
 
         // Don't actually perform semantic checking: just pass through functions bodies to downstream compiler
-        slangFlags |= SLANG_COMPILE_FLAG_NO_CHECKING | SLANG_COMPILE_FLAG_SPLIT_MIXED_TYPES;
+        slangFlags |= /*SLANG_COMPILE_FLAG_NO_CHECKING |*/ SLANG_COMPILE_FLAG_SPLIT_MIXED_TYPES;
 
         slangFlags |= SLANG_COMPILE_FLAG_USE_IR;
 
@@ -518,11 +518,13 @@ namespace Falcor
             }           
         }
 
+        auto rootSignature = RootSignature::create(mPreprocessedReflector.get());
+
         if (shaders[(uint32_t)ShaderType::Compute])
         {
             return ProgramKernels::create(
                 mPreprocessedReflector,
-                shaders[(uint32_t)ShaderType::Compute], log, getProgramDescString());
+                shaders[(uint32_t)ShaderType::Compute], rootSignature, log, getProgramDescString());
         }
         else
         {
@@ -533,6 +535,7 @@ namespace Falcor
                 shaders[(uint32_t)ShaderType::Geometry],
                 shaders[(uint32_t)ShaderType::Hull],
                 shaders[(uint32_t)ShaderType::Domain],
+                rootSignature,
                 log,
                 getProgramDescString());
         }

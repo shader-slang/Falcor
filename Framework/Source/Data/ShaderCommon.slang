@@ -29,11 +29,11 @@
 /*******************************************************************
                     Common OGL bindings
 *******************************************************************/
+#include "HostDeviceSharedMacros.h"
 
 #ifndef _FALCOR_SHADER_COMMON_H_
 #define _FALCOR_SHADER_COMMON_H_
-
-#include "HostDeviceData.h"
+__import Shading;
 
 cbuffer InternalPerFrameCB : register(b10)
 {
@@ -80,7 +80,10 @@ float3x3 getBlendedInvTransposeBoneMat(float4 weights, uint4 ids)
 }
 #endif
 
-ParameterBlock<MaterialData> gMaterial;
+__generic_param TMaterial : IMaterial;
+
+ParameterBlock<TMaterial> gMaterial;
+
 cbuffer InternalPerMaterialCB
 {
     MaterialData gTemporalMaterial;

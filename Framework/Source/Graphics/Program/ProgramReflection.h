@@ -39,6 +39,7 @@ namespace Falcor
     class ReflectionBasicType;
     class ReflectionStructType;
     class ReflectionArrayType;
+    class ReflectionGenericType;
 
     /** Base class for reflection types
     */
@@ -69,6 +70,11 @@ namespace Falcor
         /** Dynamic-cast the current object to ReflectionArrayType
         */
         const ReflectionArrayType* asArrayType() const;
+
+        /** Dynamic-cast the current object to ReflectionGenericType
+        */
+        const ReflectionGenericType* asGenericType() const;
+
 
         /** For ReflectionArrayType, recursively look for an underlying type which is not an array
         */
@@ -270,6 +276,30 @@ namespace Falcor
         size_t mSize;
         bool mIsRowMajor;
         virtual std::shared_ptr<const ReflectionVar> findMemberInternal(const std::string& name, size_t strPos, size_t offset, uint32_t regIndex, uint32_t regSpace, uint32_t descOffset) const override;
+    };
+
+    class ReflectionGenericType : public ReflectionType, public inherit_shared_from_this<ReflectionType, ReflectionGenericType>
+    {
+    public:
+        using SharedPtr = std::shared_ptr<ReflectionGenericType>;
+        using SharedConstPtr = std::shared_ptr<const ReflectionGenericType>;
+        std::string name;
+        static SharedPtr create(std::string inName);
+        virtual bool operator==(const ReflectionType& other) const override;
+        virtual size_t getSize() const override
+        {
+            return 0;
+        }
+        ReflectionGenericType(std::string inName)
+            : ReflectionType(0), name(inName)
+        {}
+    private:
+        
+        virtual std::shared_ptr<const ReflectionVar> findMemberInternal(const std::string& name, size_t strPos, size_t offset, uint32_t regIndex, uint32_t regSpace, uint32_t descOffset) const override
+        {
+            return nullptr;
+        }
+
     };
 
     /** Reflection object for resources
