@@ -346,7 +346,7 @@ namespace Falcor
     {
         finalize();
         ConstantBuffer* pCB = pBlock->getConstantBuffer(pBlock->getReflection()->getName()).get();
-        setMaterialIntoBlockCommon(pBlock, pCB, 0, "material.", mData);
+        setMaterialIntoBlockCommon(pBlock, pCB, 0, "materialData.", mData);
     }
 
     void Material::setIntoProgramVars(ProgramVars* pVars, ConstantBuffer* pCb, const char varName[]) const
@@ -365,7 +365,7 @@ namespace Falcor
     void Material::setSampler(const Sampler::SharedPtr& pSampler)
     {
         mData.samplerState = pSampler;
-        mpParamBlock->setSampler("samplerState", pSampler);
+        mpParamBlock->setSampler("materialData.samplerState", pSampler);
     }
 
     bool Material::operator==(const Material& other) const

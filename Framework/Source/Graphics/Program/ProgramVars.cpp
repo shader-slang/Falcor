@@ -260,14 +260,13 @@ namespace Falcor
     template<bool forGraphics>
     bool ProgramVars::applyProgramVarsCommon(CopyContext* pContext, bool rootSigChanged, RootSignature* pRootSig)
     {
+        // SLANG-INTEGRATION
+        uint32_t rootCounter = 0;
         // Bind the sets
         for(uint32_t b = 0 ; b < getParameterBlockCount() ; b++)
         {
             ParameterBlock* pBlock = mParameterBlocks[b].pBlock.get(); // #PARAMBLOCK getParameterBlock() because we don't want the user to change blocks directly, but we need it non-const here
             if (pBlock->prepareForDraw(pContext) == false) return false; // #PARAMBLOCK Get rid of it. getRootSets() should have a dirty flag
-
-            // SLANG-INTEGRATION
-            uint32_t rootCounter = 0;
 
             auto& rootSets = pBlock->getRootSets();
             bool forceBind = rootSigChanged || mParameterBlocks[b].bind;
