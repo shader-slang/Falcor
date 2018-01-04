@@ -226,13 +226,13 @@ namespace Falcor
         if (mBindGraphicsRootSig)
         {
             rootSignature->bindForGraphics(this);
-            mBindGraphicsRootSig = false;
         }
         // Apply the vars. Must be first because applyGraphicsVars() might cause a flush
         if (mpGraphicsVars)
         {
             applyGraphicsVars(rootSignature.get());
         }
+        mBindGraphicsRootSig = false;
 
 #if _ENABLE_NVAPI
         if (mpGraphicsState->isSinglePassStereoEnabled())

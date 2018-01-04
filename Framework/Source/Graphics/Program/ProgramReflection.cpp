@@ -930,7 +930,7 @@ namespace Falcor
             ReflectionResourceType::ReturnType::Unknown,
             ReflectionResourceType::ShaderAccess::Read);
         resType->setStructType(pType);
-        auto pVar = ReflectionVar::create("", resType, 0);
+        auto pVar = ReflectionVar::create("", resType, 0, 0, 0);
         addResource(pVar);
     }
 

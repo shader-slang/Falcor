@@ -42,7 +42,6 @@ namespace Falcor
         if (mBindComputeRootSig)
         {
             mpLowLevelData->getCommandList()->SetComputeRootSignature(rootSignature->getApiHandle());
-            mBindComputeRootSig = false;
         }
 
         // Apply the vars. Must be first because applyComputeVars() might cause a flush        
@@ -52,6 +51,7 @@ namespace Falcor
         }
         mpLowLevelData->getCommandList()->SetPipelineState(cso->getApiHandle());
         mCommandsPending = true;
+        mBindComputeRootSig = false;
     }
 
     void ComputeContext::dispatch(uint32_t groupSizeX, uint32_t groupSizeY, uint32_t groupSizeZ)

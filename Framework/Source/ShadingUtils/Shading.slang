@@ -105,7 +105,7 @@ Material shading building blocks
 
 struct Material : IMaterial
 {
-    MaterialData material;
+    MaterialData materialData;
 
     void prepare(inout ShadingAttribs shAttr)
     {
@@ -113,14 +113,14 @@ struct Material : IMaterial
 #ifdef _MS_STATIC_MATERIAL_DESC
         MaterialDesc desc = _MS_STATIC_MATERIAL_DESC;
 #else
-        MaterialDesc desc = material.desc;
+        MaterialDesc desc = materialData.desc;
 #endif
 
-        shAttr.preparedMat.values = material.values;
+        shAttr.preparedMat.values = materialData.values;
         shAttr.preparedMat.desc = desc;
 
         /* Evaluate alpha test material modifier */
-        applyAlphaTest(material, shAttr, shAttr.P);
+        applyAlphaTest(materialData, shAttr, shAttr.P);
         shAttr.aoFactor = 1;
 
         bool done = false;
@@ -132,12 +132,14 @@ struct Material : IMaterial
             if (!done)
             {
                 shAttr.preparedMat.values.layers[iLayer].albedo =
-                    evalWithColor(desc.layers[iLayer].hasTexture, material.textures.layers[iLayer], material.samplerState, material.values.layers[iLayer].albedo, shAttr);
+                    evalWithColor(desc.layers[iLayer].hasTexture, 
+                    materialData.textures.layers[iLayer], materialData.samplerState, 
+                    materialData.values.layers[iLayer].albedo, shAttr);
             }
         }
 
         /* Perturb shading normal is needed */
-        perturbNormal(material, shAttr);
+        perturbNormal(materialData, shAttr);
     }
 };
 
