@@ -133,13 +133,19 @@ namespace Falcor
         using SharedPtr = std::shared_ptr<ProgramVersion>;
         using SharedConstPtr = std::shared_ptr<const ProgramVersion>;
 
+        // SLANG-INTEGRATION:
+        // ProgramVersion now holds a SlangCompileRequest
+        // to support querying/creating new types and type layouts
+        // during ParameterBlock creation for shader components.
+        SlangCompileRequest* slangRequest = nullptr;
         using DefineList = Shader::DefineList;
 
         static SharedPtr create(
             std::shared_ptr<Program>     const& pProgram,
             DefineList                   const& defines,
             ProgramReflection::SharedPtr const& pReflector,
-            std::string                  const& name = "");
+            std::string                  const& name,
+            SlangCompileRequest * compileReq);
 
         /** Get the program that this version was created from
         */
@@ -166,7 +172,8 @@ namespace Falcor
             std::shared_ptr<Program>     const& pProgram,
             DefineList                   const& defines,
             ProgramReflection::SharedPtr const& pReflector,
-            std::string                  const& name);
+            std::string                  const& name,
+            SlangCompileRequest*         compileReq);
 
         std::shared_ptr<Program>        mpProgram;
         DefineList                      mDefines;

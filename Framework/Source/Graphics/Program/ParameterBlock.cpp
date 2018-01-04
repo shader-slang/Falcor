@@ -136,7 +136,17 @@ namespace Falcor
     }
 
     ParameterBlock::ParameterBlock(const ParameterBlockReflection::SharedConstPtr& pReflection, bool createBuffers) : mpReflector(pReflection)
-    {
+    {   
+        // SLANG-INTEGRATION
+        // when creating parameter blocks, we also store the element type of the parameter block
+        auto paramBlockType = pReflection->getType();
+        if (paramBlockType)
+        {
+            if (auto structType = paramBlockType->asStructType())
+                typeName = structType->getName();
+            else if (auto genericType = paramBlockType->asGenericType())
+                typeName = genericType->name;
+        }
         // Initialize the resource vectors
         const auto& setLayouts = pReflection->getDescriptorSetLayouts();
         mAssignedResources.resize(setLayouts.size());

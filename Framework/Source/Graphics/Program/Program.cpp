@@ -288,7 +288,12 @@ namespace Falcor
         }
     }
 
-    SlangCompileRequest* Program::createSlangCompileRequest(DefineList const& defines, CompilePurpose purpose) const
+
+    // SLANG-INTEGRATION:
+    // createSlangCompileRequest now takes global type arguments for specialization
+    SlangCompileRequest* Program::createSlangCompileRequest(DefineList const& defines, 
+        CompilePurpose purpose,
+        const std::vector<std::string> & typeArgs) const
     {
         mFileTimeMap.clear();
 
@@ -346,8 +351,8 @@ namespace Falcor
 
         slangFlags |= SLANG_COMPILE_FLAG_USE_IR;
 
-        // If we are compiling for reflection data only, skip code generation step
-        // so that the compiler does not complain about missing global type arguments
+        // If we are compiling for reflection data only, skip code generation step 
+        // so that the compiler does not complain about missing global type arguments 
         if (purpose == CompilePurpose::ReflectionOnly)
             slangFlags |= SLANG_COMPILE_FLAG_NO_CODEGEN;
 
@@ -407,6 +412,12 @@ namespace Falcor
             }
         }
 
+        std::vector<char const*> typeArgNames;
+        for (auto & name : typeArgs)
+            typeArgNames.push_back(name.c_str());
+        char const ** typeArgNamesPtr = nullptr;
+        if (typeArgNames.size())
+            typeArgNamesPtr = &typeArgNames[0];
         // Now we make a separate pass and add the entry points.
         // Each entry point references the index of the source
         // it uses, and luckily, the Slang API can use these
@@ -419,11 +430,13 @@ namespace Falcor
             if(entryPoint.sourceIndex < 0)
                 continue;
 
-            spAddEntryPoint(
+            spAddEntryPointEx(
                 slangRequest,
                 entryPoint.sourceIndex,
                 entryPoint.name.c_str(),
-                spFindProfile(slangSession, getSlangTargetString(ShaderType(i))));
+                spFindProfile(slangSession, getSlangTargetString(ShaderType(i))),
+                (int)typeArgs.size(), 
+                typeArgNamesPtr);
         }
 
         return slangRequest;
@@ -455,13 +468,15 @@ namespace Falcor
 
     ProgramVersion::SharedPtr Program::preprocessAndCreateProgramVersion(std::string& log) const
     {
-        SlangCompileRequest* slangRequest = createSlangCompileRequest(mDefineList, CompilePurpose::ReflectionOnly);
+        SlangCompileRequest* slangRequest = createSlangCompileRequest(mDefineList, 
+            CompilePurpose::ReflectionOnly,
+            std::vector<std::string>());
 
         int anyErrors = doSlangCompilation(slangRequest, log);
         if(anyErrors)
             return nullptr;
 
-        return ProgramVersion::create(const_cast<Program*>(this)->shared_from_this(), mDefineList, mPreprocessedReflector, getProgramDescString());
+        return ProgramVersion::create(const_cast<Program*>(this)->shared_from_this(), mDefineList, mPreprocessedReflector, getProgramDescString(), slangRequest);
     }
 
     ProgramKernels::SharedPtr Program::preprocessAndCreateProgramKernels(
@@ -469,9 +484,27 @@ namespace Falcor
         ProgramVars    const* pVars,
         std::string         & log) const
     {
-        SlangCompileRequest* slangRequest = createSlangCompileRequest(pVersion->getDefines(), CompilePurpose::CodeGen);
 
         // TODO: bind type parameters as needed based on `pVars`
+        auto originalReflector = pVersion->getReflector();
+        auto paramBlockCount = originalReflector->getParameterBlockCount();
+        std::vector<std::string> typeArguments;
+        for (uint32_t i = 0; i < paramBlockCount; i++)
+        {
+            auto paramBlock = originalReflector->getParameterBlock(i);
+            if (auto genType = paramBlock->getType()->asGenericType())
+            {
+                auto index = originalReflector->getTypeParameterIndexByName(genType->name);
+                auto newParamBlock = pVars->getParameterBlock(i);
+                if (typeArguments.size() <= index)
+                    typeArguments.resize(index + 1);
+                typeArguments[index] = newParamBlock->typeName;
+            }
+        }
+
+        SlangCompileRequest* slangRequest = createSlangCompileRequest(pVersion->getDefines(),
+            CompilePurpose::CodeGen,
+            typeArguments);
 
         int anyErrors = doSlangCompilation(slangRequest, log);
         if(anyErrors)
