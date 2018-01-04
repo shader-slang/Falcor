@@ -313,7 +313,6 @@ namespace Falcor
         static const size_t dataSize = sizeof(MaterialDesc) + sizeof(MaterialValues);
         static_assert(dataSize % sizeof(glm::vec4) == 0, "Material::MaterialData size should be a multiple of 16");
 
-        auto offsett = pCB->getVariableOffset(std::string(varName) + "values.layers[0].albedo");
         check_offset(values.layers[0].albedo);
         check_offset(values.id);
         assert(offset + dataSize <= pCB->getSize());
