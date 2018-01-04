@@ -38,7 +38,7 @@ namespace Falcor
     class Shader;
     class RenderContext;
 
-    enum CompilePurpose
+    enum class CompilePurpose
     {
         ReflectionOnly, CodeGen
     };
@@ -233,7 +233,7 @@ namespace Falcor
 
         bool link() const;
 
-        SlangCompileRequest* createSlangCompileRequest(DefineList const& defines, CompilePurpose purpose) const;
+        SlangCompileRequest* createSlangCompileRequest(DefineList const& defines, CompilePurpose purpose, const std::vector<std::string> & typeArgs) const;
         int Program::doSlangCompilation(SlangCompileRequest* slangRequest, std::string& log) const;
 
         ProgramVersion::SharedPtr preprocessAndCreateProgramVersion(std::string& log) const;

@@ -31,7 +31,7 @@
 #include <unordered_set>
 #include "Externals/Slang/slang.h"
 #include "API/DescriptorSet.h"
-
+#include <map>
 namespace Falcor
 {
     class ReflectionVar;
@@ -537,6 +537,12 @@ namespace Falcor
         */
         const std::string& getName() const { return mName; }
 
+        ReflectionType::SharedConstPtr mType;
+        const ReflectionType* getType() const
+        {
+            return mType.get();
+        }
+
         /** Check if the block contains any resources
         */
         bool isEmpty() const;
@@ -556,9 +562,9 @@ namespace Falcor
         /** Get a vector with the required descriptor-set layouts for the block. Useful when creating root-signatures
         */
         const SetLayoutVec& getDescriptorSetLayouts() const { return mSetLayouts; }
-    private:
         friend class ProgramReflection;
         void addResource(const ReflectionVar::SharedConstPtr& pVar);
+        void setElementType(const ReflectionType::SharedConstPtr& pType);
         void finalize();
         ParameterBlockReflection(const std::string& name);
         ResourceVec mResources;
@@ -577,6 +583,8 @@ namespace Falcor
         using SharedPtr = std::shared_ptr<ProgramReflection>;
         using SharedConstPtr = std::shared_ptr<const ProgramReflection>;
         static const uint32_t kInvalidLocation = -1;
+
+        std::map<std::string, uint32_t> typeParameterIndexMap;
 
         /** Data structured describing a shader input/output variable. Used mostly to communicate VS inputs and PS outputs
         */
@@ -636,6 +644,8 @@ namespace Falcor
         /** Get a pixel shader output variable
         */
         const ShaderVariable* getPixelShaderOutput(const std::string& name) const;
+
+        uint32_t getTypeParameterIndexByName(const std::string& name) const;
 
         /** Resource bind type
         */

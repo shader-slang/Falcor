@@ -346,7 +346,7 @@ namespace Falcor
     {
         finalize();
         ConstantBuffer* pCB = pBlock->getConstantBuffer(pBlock->getReflection()->getName()).get();
-        setMaterialIntoBlockCommon(pBlock, pCB, 0, "", mData);
+        setMaterialIntoBlockCommon(pBlock, pCB, 0, "material.", mData);
     }
 
     void Material::setIntoProgramVars(ProgramVars* pVars, ConstantBuffer* pCb, const char varName[]) const
@@ -550,13 +550,26 @@ namespace Falcor
         return ParameterBlock::SharedConstPtr(mpParamBlock);
     }
 
+    ReflectionType::SharedPtr reflectType(slang::TypeLayoutReflection* pSlangType);
+
     void Material::createParameterBlock()
     {
+        // SLANG-INTEGRATION
+        // to create a parameter block for material,
+        // we only need to use reflection information from the `Material` shader struct type.
         if (spBlockReflection == nullptr)
         {
             GraphicsProgram::SharedPtr pProgram = GraphicsProgram::createFromFile("", "Framework/Shaders/MaterialBlock.slang");
             ProgramReflection::SharedConstPtr pReflection = pProgram->getActiveVersion()->getReflector();
-            spBlockReflection = pReflection->getParameterBlock(kMaterialVarName);
+            auto slangReq = pProgram->getActiveVersion()->slangRequest;
+            auto reflection = spGetReflection(slangReq);
+            auto materialType = spReflection_FindTypeByName(reflection, "Material");
+            auto layout = spReflection_GetTypeLayout(reflection, materialType, SLANG_LAYOUT_RULES_DEFAULT);
+            auto blockType = reflectType((slang::TypeLayoutReflection*)layout);
+            auto blockReflection = ParameterBlockReflection::create("");
+            blockReflection->setElementType(blockType);
+            blockReflection->finalize();
+            spBlockReflection = blockReflection;
             assert(spBlockReflection);
         }
         mpParamBlock = ParameterBlock::create(spBlockReflection, true);
