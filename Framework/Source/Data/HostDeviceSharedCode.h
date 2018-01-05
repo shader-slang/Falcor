@@ -165,42 +165,6 @@ struct MaterialData
     SamplerState samplerState;  // The sampler state to use when sampling the object
 };
 
-struct PreparedMaterialData
-{
-    MaterialDesc    desc;
-    MaterialValues  values;
-};
-
-/**
-    The structure stores the complete information about the shading point,
-    except for a light source information.
-    It stores pre-evaluated material parameters with pre-fetched textures,
-    shading point position, normal, viewing direction etc.
-*/
-struct ShadingAttribs
-{
-    float3    P;                                  ///< Shading hit position in world space
-    float3    E;                                  ///< Direction to the eye at shading hit
-    float3    N;                                  ///< Shading normal at shading hit
-    float3    T;                                  ///< Shading tangent at shading hit
-    float3    B;                                  ///< Shading bitangent at shading hit
-    float2    UV;                                 ///< Texture mapping coordinates
-
-#ifdef _MS_USER_DERIVATIVES
-    float2    DPDX            DEFAULTS(float2(0, 0));                                  
-    float2    DPDY            DEFAULTS(float2(0, 0)); ///< User-provided 2x2 full matrix of duv/dxy derivatives of a shading point footprint in texture space
-#else
-    float   lodBias         DEFAULTS(0);        ///< LOD bias to use when sampling textures
-#endif
-
-#ifdef _MS_USER_HALF_VECTOR_DERIVATIVES
-    float2    DHDX            DEFAULTS(float2(0, 0));
-    float2    DHDY            DEFAULTS(float2(0, 0));  ///< User-defined half-vector derivatives
-#endif
-    PreparedMaterialData preparedMat;               ///< Copy of the original material with evaluated parameters (i.e., textures are fetched etc.)
-    float aoFactor;
-};
-
 /*******************************************************************
                     Lights
 *******************************************************************/

@@ -266,11 +266,11 @@ void SimpleDeferred::onFrameRender()
 
         // Set lighting params
         ConstantBuffer::SharedPtr pLightCB = mpLightingVars["PerImageCB"];
-        pLightCB["gAmbient"] = mAmbientIntensity;
-        mpDirLight->setIntoConstantBuffer(pLightCB.get(), "gDirLight");
-        mpPointLight->setIntoConstantBuffer(pLightCB.get(), "gPointLight");
+        pLightCB["params.gAmbient"] = mAmbientIntensity;
+        mpDirLight->setIntoConstantBuffer(pLightCB.get(), "params.gDirLight");
+        mpPointLight->setIntoConstantBuffer(pLightCB.get(), "params.gPointLight");
         // Debug mode
-        pLightCB->setVariable("gDebugMode", (uint32_t)mDebugMode);
+        pLightCB->setVariable("params.gDebugMode", (uint32_t)mDebugMode);
 
         // Set GBuffer as input
         mpLightingVars->setTexture("gGBuf0", mpGBufferFbo->getColorTexture(0));

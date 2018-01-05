@@ -24,7 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SimpleDeferred.h" />
-    <ClInclude Include="Data\LightingPassCommon.h">
+    <ClInclude Include="Data\LightingPassCommon.slang">
       <Filter>Data</Filter>
     </ClInclude>
   </ItemGroup>

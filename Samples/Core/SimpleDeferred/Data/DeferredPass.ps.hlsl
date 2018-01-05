@@ -45,8 +45,8 @@ PS_OUT main(VS_OUT vOut)
     prepareShadingAttribs(mat, vOut.posW, gCam.position, vOut.normalW, vOut.texC, shAttr);
 
     PS_OUT psOut;
-    psOut.fragColor0 = float4(shAttr.P, 1);
-    psOut.fragColor1 = float4(shAttr.N, 1);
+    psOut.fragColor0 = float4(shAttr.geom.P, 1);
+    psOut.fragColor1 = float4(shAttr.geom.N, 1);
     psOut.fragColor2 = shAttr.preparedMat.values.layers[0].albedo;
 
     return psOut;
