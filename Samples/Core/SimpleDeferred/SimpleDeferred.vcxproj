@@ -14,7 +14,7 @@
     <ClCompile Include="SimpleDeferred.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Data\LightingPassCommon.h" />
+    <ClInclude Include="Data\LightingPassCommon.slang" />
     <ClInclude Include="SimpleDeferred.h" />
   </ItemGroup>
   <ItemGroup>

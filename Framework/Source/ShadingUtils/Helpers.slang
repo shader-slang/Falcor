@@ -32,6 +32,7 @@
 // Make sure we get the macros like `_fn` and `_ref`
 // TODO: just eliminate these since we know this is pure Slang.
 #include "HostDeviceData.h"
+__import Interfaces;
 
 /*******************************************************************
 					Sampling functions
@@ -198,7 +199,7 @@ void _fn reflectFrame(float3 n, float3 reflect, _ref(float3) t, _ref(float3) b)
 					Texturing routines
 *******************************************************************/
 
-float4 _fn sampleTexture(Texture2D t, SamplerState s, ShadingAttribs attr)
+float4 _fn sampleTexture(Texture2D t, SamplerState s, ShadingGeometry attr)
 {
 #ifndef _MS_USER_DERIVATIVES
     return t.SampleBias(s, attr.UV, attr.lodBias);
@@ -207,7 +208,7 @@ float4 _fn sampleTexture(Texture2D t, SamplerState s, ShadingAttribs attr)
 #endif
 }
 
-float4 _fn sampleTexture(Texture2DArray t, SamplerState s, ShadingAttribs attr, int arrayIndex)
+float4 _fn sampleTexture(Texture2DArray t, SamplerState s, ShadingGeometry attr, int arrayIndex)
 {
 #ifndef _MS_USER_DERIVATIVES
     return t.SampleBias(s, float3(attr.UV, arrayIndex), attr.lodBias);
@@ -216,7 +217,7 @@ float4 _fn sampleTexture(Texture2DArray t, SamplerState s, ShadingAttribs attr, 
 #endif
 }
 
-float4 _fn evalTex(in uint32_t hasTexture, Texture2D tex, SamplerState s, ShadingAttribs attr, in float4 defaultValue)
+float4 _fn evalTex(in uint32_t hasTexture, Texture2D tex, SamplerState s, ShadingGeometry attr, in float4 defaultValue)
 {
 #ifndef _MS_DISABLE_TEXTURES
 	if(hasTexture != 0)
@@ -228,7 +229,7 @@ float4 _fn evalTex(in uint32_t hasTexture, Texture2D tex, SamplerState s, Shadin
 	return defaultValue;
 }
 
-float4 _fn evalWithColor(in uint32_t hasTexture, Texture2D tex, SamplerState s, float4 color, ShadingAttribs attr)
+float4 _fn evalWithColor(in uint32_t hasTexture, Texture2D tex, SamplerState s, float4 color, ShadingGeometry attr)
 {
 	return evalTex(hasTexture, tex, s, attr, color);
 }
@@ -267,7 +268,7 @@ void _fn applyNormalMap(in float3 texValue, _ref(float3) n, _ref(float3) t, _ref
 }
 
 #ifndef _MS_LEAN_MAPPING
-void _fn perturbNormal(MaterialData mat, _ref(ShadingAttribs) attr, bool forceSample)
+void _fn perturbNormal(MaterialData mat, _ref(ShadingGeometry) attr, bool forceSample)
 {
 	if(forceSample || mat.desc.hasNormalMap != 0)
 	{
@@ -276,7 +277,7 @@ void _fn perturbNormal(MaterialData mat, _ref(ShadingAttribs) attr, bool forceSa
 	}
 }
 #else
-void applyLeanMap(in Texture2D leanMap, in SamplerState samplerState, inout ShadingAttribs shAttr)
+void applyLeanMap(in Texture2D leanMap, in SamplerState samplerState, inout ShadingGeometry shAttr)
 {
     float4 t = sampleTexture(leanMap, samplerState, shAttr);
     // Reconstruct B 
@@ -321,7 +322,7 @@ void applyLeanMap(in Texture2D leanMap, in SamplerState samplerState, inout Shad
 #endif
 }
 
-void perturbNormal(MaterialData mat, inout ShadingAttribs shAttr, bool forceSample)
+void perturbNormal(MaterialData mat, inout ShadingGeometry shAttr, bool forceSample)
 {
     if (mat.desc.hasNormalMap != 0)
     {
@@ -331,7 +332,7 @@ void perturbNormal(MaterialData mat, inout ShadingAttribs shAttr, bool forceSamp
 #endif
 
 // Note: explicit overload instead of default argument, at least until cross-compiler can handle defaults
-void _fn perturbNormal(MaterialData mat, _ref(ShadingAttribs) attr)
+void _fn perturbNormal(MaterialData mat, _ref(ShadingGeometry) attr)
 {
 	perturbNormal(mat, attr, false);
 }
@@ -346,7 +347,7 @@ bool _fn alphaTestEnabled(MaterialData mat)
     return mat.desc.hasAlphaMap != 0;
 }
 
-bool _fn alphaTestPassed(MaterialData mat, ShadingAttribs attr)
+bool _fn alphaTestPassed(MaterialData mat, ShadingGeometry attr)
 {
 #ifndef _MS_DISABLE_ALPHA_TEST
     if(sampleTexture(mat.textures.alphaMap, mat.samplerState, attr).x < mat.values.alphaThreshold)
@@ -355,7 +356,7 @@ bool _fn alphaTestPassed(MaterialData mat, ShadingAttribs attr)
     return true;
 }
 
-void _fn basicAlphaTest(MaterialData mat, ShadingAttribs attr)
+void _fn basicAlphaTest(MaterialData mat, ShadingGeometry attr)
 {
 #ifndef _MS_DISABLE_ALPHA_TEST
     if(alphaTestEnabled(mat))
@@ -370,7 +371,7 @@ void _fn basicAlphaTest(MaterialData mat, ShadingAttribs attr)
                     Hashed Alpha Test
 *******************************************************************/
 
-bool _fn hashedAlphaTestPassed(MaterialData mat, ShadingAttribs attr, float alphaThreshold)
+bool _fn hashedAlphaTestPassed(MaterialData mat, ShadingGeometry attr, float alphaThreshold)
 {
     float compareTo = alphaThreshold <= 0 ? mat.values.alphaThreshold : clamp(alphaThreshold, 0.0f, 1.0f);
 #ifndef _MS_DISABLE_ALPHA_TEST
@@ -380,7 +381,7 @@ bool _fn hashedAlphaTestPassed(MaterialData mat, ShadingAttribs attr, float alph
     return true;
 }
 
-void _fn applyHashedAlphaTest(MaterialData mat, ShadingAttribs attr, float alphaThreshold)
+void _fn applyHashedAlphaTest(MaterialData mat, ShadingGeometry attr, float alphaThreshold)
 {
 #ifndef _MS_DISABLE_ALPHA_TEST
     if (alphaTestEnabled(mat))
@@ -470,7 +471,7 @@ float _fn calculateHashedAlpha(float3 hashInputCoord, float hashScale, bool useA
 /*******************************************************************
     alpha test
 *******************************************************************/    
-void _fn applyAlphaTest(MaterialData material, ShadingAttribs shAttr, float3 posW)
+void _fn applyAlphaTest(MaterialData material, ShadingGeometry shAttr, float3 posW)
 {
     float hashedAlphaScale = 1.0f;
 #ifdef _HASHED_ALPHA_SCALE

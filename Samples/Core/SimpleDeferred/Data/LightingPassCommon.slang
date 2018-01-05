@@ -26,6 +26,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
+__import ShaderCommonImpl;
+__import Shading;
+__import Interfaces;
+
 // Debug modes
 #define ShowPos         1
 #define ShowNormals     2
@@ -38,7 +42,18 @@
 #define vec4 float4
 #endif
 
-vec3 shade(vec3 posW, vec3 normalW, vec4 albedo)
+struct LightingPassParams
+{
+    // G-Buffer
+    // Lighting params
+	LightData gDirLight;
+	LightData gPointLight;
+	float3 gAmbient;
+    // Debug mode
+	uint gDebugMode;
+};
+
+vec3 shade(LightingPassParams params, vec3 posW, vec3 normalW, vec4 albedo)
 {
     // Discard empty pixels
     if (albedo.a <= 0)
@@ -47,10 +62,10 @@ vec3 shade(vec3 posW, vec3 normalW, vec4 albedo)
     }
 
     /* Reconstruct shading attributes */
-    ShadingAttribs shAttr;
-    shAttr.P = posW;
-    shAttr.E = normalize(gCam.position - posW);
-    shAttr.N = normalW;
+    ShadingAttribsImpl<PreparedMaterialData> shAttr;
+    shAttr.geom.P = posW;
+    shAttr.geom.E = normalize(gCam.position - posW);
+    shAttr.geom.N = normalW;
 
     /* Reconstruct layers (one diffuse layer) */
     initDiffuseLayer(shAttr.preparedMat.desc.layers[0], shAttr.preparedMat.values.layers[0], albedo.rgb);
@@ -59,21 +74,21 @@ vec3 shade(vec3 posW, vec3 normalW, vec4 albedo)
     /* Do lighting */
     ShadingOutput result;
     // Directional light
-    evalMaterial(shAttr, gDirLight, result, true);
+    evalMaterial(shAttr, params.gDirLight, result, true);
     // Point light
-    evalMaterial(shAttr, gPointLight, result, false);
+    evalMaterial(shAttr, params.gPointLight, result, false);
     // Add ambient term
-    result.finalValue += gAmbient * result.diffuseAlbedo;
-    result.diffuseIllumination += gAmbient;
+    result.finalValue += params.gAmbient * result.diffuseAlbedo;
+    result.diffuseIllumination += params.gAmbient;
 
     // Debug vis
-    if (gDebugMode != 0)
+    if (params.gDebugMode != 0)
     {
-        if (gDebugMode == ShowPos)
+        if (params.gDebugMode == ShowPos)
             result.finalValue = posW;
-        else if (gDebugMode == ShowNormals)
+        else if (params.gDebugMode == ShowNormals)
             result.finalValue = 0.5 * normalW + 0.5f;
-        else if (gDebugMode == ShowAlbedo)
+        else if (params.gDebugMode == ShowAlbedo)
             result.finalValue = albedo.rgb;
         else
             result.finalValue = result.diffuseIllumination;

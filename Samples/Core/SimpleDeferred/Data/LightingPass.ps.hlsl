@@ -27,19 +27,13 @@
 ***************************************************************************/
 __import ShaderCommonImpl;
 __import Shading;
+__import LightingPassCommon;
 
 cbuffer PerImageCB
 {
-    // G-Buffer
-    // Lighting params
-	LightData gDirLight;
-	LightData gPointLight;
-	float3 gAmbient;
-    // Debug mode
-	uint gDebugMode;
+    LightingPassParams params;
 };
 
-#include "LightingPassCommon.h"
 
 Texture2D gGBuf0;
 Texture2D gGBuf1;
@@ -52,7 +46,7 @@ float4 main(float2 texC : TEXCOORD, float4 pos : SV_POSITION) : SV_TARGET
     const float3 normalW = gGBuf1.Load(int3(pos.xy, 0)).rgb;
     const float4 albedo  = gGBuf2.Load(int3(pos.xy, 0));
 
-    float3 color = shade(posW, normalW, albedo);
+    float3 color = shade(params, posW, normalW, albedo);
 
 	return float4(color, 1);
 }

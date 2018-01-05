@@ -34,11 +34,7 @@
 #include "HostDeviceData.h"
 
 __import Helpers;
-
-interface IMaterial
-{
-    void prepare(inout ShadingAttribs shAttrib);
-}
+__import Interfaces;
 
 /*******************************************************************
 Documentation
@@ -93,6 +89,35 @@ struct ShadingOutput
     float2  effectiveRoughness;     ///< Sampled brdf roughness, or for evaluated material, an effective roughness
 };
 
+// SLANG-INTEGRATION: define interfaces
+
+interface IBRDF
+{
+    void eval(ShadingGeometry geom, LightAttribs lAttr, inout ShadingOutput result);
+}
+
+interface IMaterial
+{
+    //associatedtype EvaluatedMaterialValues;
+
+    ShadingAttribsImpl<PreparedMaterialData> prepare(ShadingGeometry geom);
+}
+
+ShadingOutput initShadingOutput()
+{
+    ShadingOutput result;
+    result.diffuseAlbedo = 0;
+    result.diffuseIllumination = 0;
+    result.specularAlbedo = 0;
+    result.specularIllumination = 0;
+    result.finalValue = 0;
+    result.effectiveRoughness = 0;
+    result.wi = 0;
+    result.pdf = 0;
+    result.thp = 0;
+    return result;
+}
+
 /* Include all shading routines, including endpoints (camera and light) */
 
 __import Cameras;
@@ -103,12 +128,60 @@ __import BSDFs;
 Material shading building blocks
 *******************************************************************/
 
+struct PreparedMaterialData : IBRDF
+{
+    MaterialDesc    desc;
+    MaterialValues  values;
+    
+    // SLANG-INTEGRATION: move aoFactor from ShadingAttribs to PreparedMaterialData
+    float aoFactor;
+
+
+    // SLANG-INTEGRATION: PreparedMaterialData now implements IBRDF interface
+
+    void eval(ShadingGeometry geom, LightAttribs lAttr, inout ShadingOutput result)
+    {
+        // call previous evalMaterial (now evalDefaultMaterial) function 
+        ShadingAttribsImpl<PreparedMaterialData> shAttr = makeShadingAttribs(geom, this);
+        evalDefaultMaterial(shAttr, lAttr, result, false);
+    }
+};
+
+ShadingGeometry prepareShadingGeometry(float3 P, float3 camPos, 
+        float3 normal, float3 bitangent, float2 uv,
+        #ifdef _MS_USER_DERIVATIVES
+            float2 dPdx, float2 dPdy,
+        #else
+            float lodBias,
+        #endif
+    )
+{
+    /* Prepare shading geometry attributes */
+    ShadingGeometry geom;
+    geom.P = P;
+    geom.E = normalize(camPos - P);
+    geom.N = normalize(normal);
+    geom.B = normalize(bitangent - geom.N * (dot(bitangent, geom.N)));
+    geom.T = normalize(cross(geom.B, geom.N));
+    geom.UV = uv;
+    #ifdef _MS_USER_DERIVATIVES
+        geom.DPDX = dPdx;
+        geom.DPDY = dPdy;
+    #else
+        geom.lodBias = lodBias;
+    #endif
+    return geom;
+}
+
 struct Material : IMaterial
 {
     MaterialData materialData;
 
-    void prepare(inout ShadingAttribs shAttr)
+    ShadingAttribsImpl<PreparedMaterialData> prepare(ShadingGeometry geom)
     {
+        ShadingAttribsImpl<PreparedMaterialData> shAttr;
+        shAttr.geom = geom;
+
         /* Copy the input material parameters */
 #ifdef _MS_STATIC_MATERIAL_DESC
         MaterialDesc desc = _MS_STATIC_MATERIAL_DESC;
@@ -120,8 +193,8 @@ struct Material : IMaterial
         shAttr.preparedMat.desc = desc;
 
         /* Evaluate alpha test material modifier */
-        applyAlphaTest(materialData, shAttr, shAttr.P);
-        shAttr.aoFactor = 1;
+        applyAlphaTest(materialData, shAttr.geom, shAttr.geom.P);
+        shAttr.preparedMat.aoFactor = 1;
 
         bool done = false;
         $for(iLayer in Range(0, MatMaxLayers))
@@ -134,12 +207,13 @@ struct Material : IMaterial
                 shAttr.preparedMat.values.layers[iLayer].albedo =
                     evalWithColor(desc.layers[iLayer].hasTexture, 
                     materialData.textures.layers[iLayer], materialData.samplerState, 
-                    materialData.values.layers[iLayer].albedo, shAttr);
+                    materialData.values.layers[iLayer].albedo, shAttr.geom);
             }
         }
 
         /* Perturb shading normal is needed */
-        perturbNormal(materialData, shAttr);
+        perturbNormal(materialData, shAttr.geom);
+        return shAttr;
     }
 };
 
@@ -157,23 +231,16 @@ void prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P,
 #else
     float lodBias,
 #endif
-    _ref(ShadingAttribs) shAttr)
+    _ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr)
 {
-    /* Prepare shading attributes */
-    shAttr.P = P;
-    shAttr.E = normalize(camPos - P);
-    shAttr.N = normalize(normal);
-    shAttr.B = normalize(bitangent - shAttr.N * (dot(bitangent, shAttr.N)));
-    shAttr.T = normalize(cross(shAttr.B, shAttr.N));
-    shAttr.UV = uv;
-#ifdef _MS_USER_DERIVATIVES
-    shAttr.DPDX = dPdx;
-    shAttr.DPDY = dPdy;
-#else
-    shAttr.lodBias = lodBias;
-#endif
-
-    material.prepare(shAttr);
+    ShadingGeometry geom = prepareShadingGeometry(P, camPos, normal, bitangent, uv,
+    #ifdef _MS_USER_DERIVATIVES
+        dPdx, dPdy,
+    #else
+        lodBias
+    #endif
+    );
+    shAttr = material.prepare(geom);
 }
 
 /**
@@ -187,7 +254,7 @@ void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float
 #else
     float lodBias,
 #endif
-    _ref(ShadingAttribs) shAttr)
+    _ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr)
 {
     /* Generate an axis-aligned tangent frame */
     float3 bitangent;
@@ -204,12 +271,16 @@ void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float
 
 #ifndef _MS_USER_DERIVATIVES
 // Legacy version of prepareShadingAttribs() without LOD bias
-void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, in float3 camPos, in float3 normal, in float2 uv, _ref(ShadingAttribs) shAttr)
+void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, 
+    in float3 camPos, in float3 normal, in float2 uv, 
+    _ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr)
 {
     prepareShadingAttribs(material, P, camPos, normal, uv, 0, shAttr);
 }
 
-void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, in float3 camPos, in float3 normal, in float3 bitangent, in float2 uv, _ref(ShadingAttribs) shAttr)
+void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, 
+    in float3 camPos, in float3 normal, in float3 bitangent, in float2 uv, 
+    _ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr)
 {
     prepareShadingAttribs(material, P, camPos, normal, bitangent, uv, 0, shAttr);
 }
@@ -241,7 +312,7 @@ float4 _fn evalDiffuseLayer(MaterialLayerValues layer, float3 lightIntensity, fl
 
 // Implementation of NDF filtering code from the HPG'16 submission
 // The writeup is here: //research/graphics/projects/halfvectorSpace/SAA/paper/specaa-sub.pdf
-float2 _fn filterRoughness(ShadingAttribs shAttr, LightAttribs lAttr, in float2 roughness)
+float2 _fn filterRoughness(ShadingGeometry shAttr, LightAttribs lAttr, in float2 roughness)
 {
 #ifdef _MS_USER_HALF_VECTOR_DERIVATIVES
     float2  hppDx = shAttr.DHDX;
@@ -268,7 +339,7 @@ float2 _fn filterRoughness(ShadingAttribs shAttr, LightAttribs lAttr, in float2 
     return roughness;
 }
 
-float4 _fn evalSpecularLayer(MaterialLayerDesc desc, MaterialLayerValues data, ShadingAttribs shAttr, LightAttribs lAttr, _ref(PassOutput) result)
+float4 _fn evalSpecularLayer(MaterialLayerDesc desc, MaterialLayerValues data, ShadingGeometry shAttr, LightAttribs lAttr, _ref(PassOutput) result)
 {
 #ifndef _MS_DISABLE_SPECULAR
     /* Add albedo regardless of facing */
@@ -374,7 +445,7 @@ The routine takes a layer index, as well as shading attributes, including prepar
 it also takes prepared attributes of a light source, such as incident radiance and a world-space direction to the light.
 The output is the illumination of the current layer, blended into the results of the previous layers with a specified blending mode.
 */
-void _fn evalMaterialLayer(int iLayer, ShadingAttribs attr, LightAttribs lAttr,
+void _fn evalMaterialLayer(int iLayer, ShadingAttribsImpl<PreparedMaterialData> attr, LightAttribs lAttr,
     _ref(PassOutput) result)
 {
     float4 value = 0;
@@ -384,14 +455,14 @@ void _fn evalMaterialLayer(int iLayer, ShadingAttribs attr, LightAttribs lAttr,
     switch(desc.type)
     {
     case MatLambert: /* Diffuse BRDF */
-        value = evalDiffuseLayer(values, lAttr.lightIntensity, lAttr.L, attr.N, result) * lAttr.shadowFactor;
+        value = evalDiffuseLayer(values, lAttr.lightIntensity, lAttr.L, attr.geom.N, result) * lAttr.shadowFactor;
         break;
     case MatEmissive:
         value = evalEmissiveLayer(values, result);
         break;
     case MatConductor:
     case MatDielectric:
-        value = evalSpecularLayer(desc, values, attr, lAttr, result) * lAttr.shadowFactor;
+        value = evalSpecularLayer(desc, values, attr.geom, lAttr, result) * lAttr.shadowFactor;
         break;
     };
 
@@ -402,13 +473,29 @@ void _fn evalMaterialLayer(int iLayer, ShadingAttribs attr, LightAttribs lAttr,
     result.effectiveRoughness += result.roughness * delta;
 }
 
+// SLANG-INTEGRATION: evalMaterial function now becomes a generic function that
+// calls the IBRDF.eval() method
+void evalMaterial<TBRDF : IBRDF>(
+    ShadingAttribsImpl<TBRDF> shAttr,
+    LightAttribs lAttr,
+    _ref(ShadingOutput) result,
+    bool initializeShadingOut DEFAULTS(false))
+{
+    if (initializeShadingOut)
+        result = initShadingOutput();
+    shAttr.preparedMat.eval(shAttr.geom, lAttr, result);
+}
+
+// SLANG-INTEGRATION: rename all evalMaterial functions to evalDefaultMaterial
+// and these functions takes renamed ShadingAttribs (now ShadingAttribsImpl<PreparedMaterialData>)
+// as its argument
 
 /**	The highest-level material evaluation function.
 This is the main routing for evaluating a complete PBR material, given a shading point and a light source.
 Should be called once per light.
 */
-void _fn evalMaterial(
-    ShadingAttribs shAttr,
+void _fn evalDefaultMaterial(
+    ShadingAttribsImpl<PreparedMaterialData> shAttr,
     LightAttribs lAttr,
     _ref(ShadingOutput) result,
     bool initializeShadingOut DEFAULTS(false))
@@ -465,8 +552,8 @@ void _fn evalMaterial(
     result.specularAlbedo = passResult.specularAlbedo;
 }
 
-void _fn evalMaterial(
-    ShadingAttribs shAttr,
+void _fn evalMaterial<TBRDF : IBRDF>(
+    ShadingAttribsImpl<TBRDF> shAttr,
     LightData light,
     float shadowFactor,
     _ref(ShadingOutput) result,
@@ -474,7 +561,7 @@ void _fn evalMaterial(
 {
     /* Prepare lighting attributes */
     LightAttribs LAttr;
-    prepareLightAttribs(light, shAttr, shadowFactor, LAttr);
+    prepareLightAttribs(light, shAttr.geom, shadowFactor, LAttr);
 
     /* Evaluate material with lighting attributes */
     evalMaterial(shAttr, LAttr, result, initializeShadingOut);
@@ -483,8 +570,8 @@ void _fn evalMaterial(
 /**
 Another overload of material evaluation function, which prepares light attributes internally.
 */
-void _fn evalMaterial(
-    ShadingAttribs shAttr,
+void _fn evalMaterial<TBRDF : IBRDF>(
+    ShadingAttribsImpl<TBRDF> shAttr,
     LightData light,
     _ref(ShadingOutput) result,
     bool initializeShadingOut DEFAULTS(false))
@@ -578,7 +665,7 @@ Tries to find a diffuse albedo color for a given material
 \param[in] Material Material to look in
 returns black if the layer is not found, diffuse albedo color otherwise
 */
-float4 _fn getDiffuseColor(ShadingAttribs shAttr)
+float4 _fn getDiffuseColor(ShadingAttribsImpl<PreparedMaterialData> shAttr)
 {
     float4 ret = 0;
     // This is here because the HLSL compiler complains about 'data' not being completely initialized when used
@@ -598,7 +685,7 @@ Tries to override a diffuse albedo color for all layers within a given material
 \param[in] Material Material to look in
 returns true if succeeded
 */
-bool _fn overrideDiffuseColor(_ref(ShadingAttribs) shAttr, float4 albedo, bool allLayers = true)
+bool _fn overrideDiffuseColor(_ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr, float4 albedo, bool allLayers = true)
 {
     bool found = false;
     if(!allLayers)
@@ -631,7 +718,7 @@ Tries to find a specular albedo color for a given material
 \param[in] material Material to look in
 returns black if the layer is not found, specular color otherwise
 */
-float4 _fn getSpecularColor(ShadingAttribs shAttr)
+float4 _fn getSpecularColor(ShadingAttribsImpl<PreparedMaterialData> shAttr)
 {
     float4 ret = 0;
     MaterialLayerValues data;
@@ -652,7 +739,7 @@ float4 _fn getSpecularColor(ShadingAttribs shAttr)
     \param[out] result Gather incident direction, probability density function, and path throughput
 */
 void _fn sampleMaterial(
-    ShadingAttribs shAttr,
+    ShadingAttribsImpl<PreparedMaterialData> shAttr,
     in float2 rSample,
     _ref(ShadingOutput) result)
 {
@@ -677,7 +764,7 @@ void _fn sampleMaterial(
             sampleDiffuse = false;
 
             float3 m;
-            float3 wo = toLocal(shAttr.E, shAttr.T, shAttr.B, shAttr.N);
+            float3 wo = toLocal(shAttr.geom.E, shAttr.geom.T, shAttr.geom.B, shAttr.geom.N);
             float2 roughness = float2(specData.roughness.x, specData.roughness.y);
 
             // Set the specular reflectivity
@@ -702,13 +789,13 @@ void _fn sampleMaterial(
 
             // Convert direction vector from local to global frame
             // global space coordinates
-            result.wi = fromLocal(result.wi, shAttr.T, shAttr.B, shAttr.N);
+            result.wi = fromLocal(result.wi, shAttr.geom.T, shAttr.geom.B, shAttr.geom.N);
 
             // Evaluate standard microfacet model terms
-            result.thp *= evalMicrofacetTerms(shAttr.T, shAttr.B, shAttr.N, m, shAttr.E, result.wi, roughness, specDesc.ndf, (specDesc.type) == MatDielectric);
+            result.thp *= evalMicrofacetTerms(shAttr.geom.T, shAttr.geom.B, shAttr.geom.N, m, shAttr.geom.E, result.wi, roughness, specDesc.ndf, (specDesc.type) == MatDielectric);
 
             // Fresnel conductor/dielectric term
-            float HoE = dot(m, shAttr.E);
+            float HoE = dot(m, shAttr.geom.E);
             float IoR = specData.extraParam.x;
             float kappa = specData.extraParam.y;
             float F_term = (specDesc.type == MatConductor) ? conductorFresnel(HoE, IoR, kappa) : 1.f - dielectricFresnel(HoE, IoR);
@@ -732,7 +819,7 @@ void _fn sampleMaterial(
 
         // Convert direction vector from local to global frame
         // global space coordinates
-        result.wi = fromLocal(result.wi, shAttr.T, shAttr.B, shAttr.N);
+        result.wi = fromLocal(result.wi, shAttr.geom.T, shAttr.geom.B, shAttr.geom.N);
 
         // Ideally thp = (\rho / \pi) * |\omega_i . n| / bsdfPdf
         // By importance sampling the cosine lobe, we can set bsdfPdf = |\omega_i . n| / \pi

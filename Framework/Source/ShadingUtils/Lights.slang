@@ -30,6 +30,7 @@
 #define _FALCOR_LIGHTS_H_
 
 __import Helpers;
+__import Interfaces;
 
 // Make sure we get the macros like `_fn` and `_ref`
 // TODO: just eliminate these since we know this is pure Slang.
@@ -96,7 +97,7 @@ inline float3 _fn getLightRadiance(LightData Light, float3 shadingPosition)
     The outputs are an incident radiance towards the shading point 
     and the direction from the shading point towards the light source.
 */
-inline void _fn prepareLightAttribs(LightData Light, ShadingAttribs ShAttr, float shadowFactor, _ref(LightAttribs) LightAttr)
+inline void _fn prepareLightAttribs(LightData Light, ShadingGeometry ShAttr, float shadowFactor, _ref(LightAttribs) LightAttr)
 {
     /* Evaluate direction to the light */
     LightAttr.P = getLightPos(Light, ShAttr.P);
