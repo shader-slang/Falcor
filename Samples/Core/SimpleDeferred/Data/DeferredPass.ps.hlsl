@@ -47,7 +47,6 @@ PS_OUT main(VS_OUT vOut)
     PS_OUT psOut;
     psOut.fragColor0 = float4(shAttr.geom.P, 1);
     psOut.fragColor1 = float4(shAttr.geom.N, 1);
-    psOut.fragColor2 = shAttr.preparedMat.values.layers[0].albedo;
-
+    psOut.fragColor2 = shAttr.preparedMat.getAlbedo();
     return psOut;
 }
