@@ -94,13 +94,14 @@ struct ShadingOutput
 interface IBRDF
 {
     void eval(ShadingGeometry geom, LightAttribs lAttr, inout ShadingOutput result);
+    float4 getAlbedo();
 }
 
 interface IMaterial
 {
-    //associatedtype EvaluatedMaterialValues;
+    associatedtype EvaluatedMaterial : IBRDF;
 
-    ShadingAttribsImpl<PreparedMaterialData> prepare(ShadingGeometry geom);
+    ShadingAttribsImpl<EvaluatedMaterial> prepare(ShadingGeometry geom);
 }
 
 ShadingOutput initShadingOutput()
@@ -145,6 +146,11 @@ struct PreparedMaterialData : IBRDF
         ShadingAttribsImpl<PreparedMaterialData> shAttr = makeShadingAttribs(geom, this);
         evalDefaultMaterial(shAttr, lAttr, result, false);
     }
+
+    float4 getAlbedo()
+    {
+        return values.layers[desc.layerIdByType[MatLambert].id].albedo;
+    }
 };
 
 ShadingGeometry prepareShadingGeometry(float3 P, float3 camPos, 
@@ -175,6 +181,8 @@ ShadingGeometry prepareShadingGeometry(float3 P, float3 camPos,
 
 struct Material : IMaterial
 {
+    typedef PreparedMaterialData EvaluatedMaterial;
+    
     MaterialData materialData;
 
     ShadingAttribsImpl<PreparedMaterialData> prepare(ShadingGeometry geom)
@@ -231,7 +239,7 @@ void prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P,
 #else
     float lodBias,
 #endif
-    _ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr)
+    _ref(ShadingAttribsImpl<TMaterial.EvaluatedMaterial>) shAttr)
 {
     ShadingGeometry geom = prepareShadingGeometry(P, camPos, normal, bitangent, uv,
     #ifdef _MS_USER_DERIVATIVES
@@ -254,7 +262,7 @@ void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float
 #else
     float lodBias,
 #endif
-    _ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr)
+    _ref(ShadingAttribsImpl<TMaterial.EvaluatedMaterial>) shAttr)
 {
     /* Generate an axis-aligned tangent frame */
     float3 bitangent;
@@ -273,14 +281,14 @@ void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float
 // Legacy version of prepareShadingAttribs() without LOD bias
 void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, 
     in float3 camPos, in float3 normal, in float2 uv, 
-    _ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr)
+    _ref(ShadingAttribsImpl<TMaterial.EvaluatedMaterial>) shAttr)
 {
     prepareShadingAttribs(material, P, camPos, normal, uv, 0, shAttr);
 }
 
 void _fn prepareShadingAttribs<TMaterial:IMaterial>(TMaterial material, in float3 P, 
     in float3 camPos, in float3 normal, in float3 bitangent, in float2 uv, 
-    _ref(ShadingAttribsImpl<PreparedMaterialData>) shAttr)
+    _ref(ShadingAttribsImpl<TMaterial.EvaluatedMaterial>) shAttr)
 {
     prepareShadingAttribs(material, P, camPos, normal, bitangent, uv, 0, shAttr);
 }
