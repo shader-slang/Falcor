@@ -135,6 +135,7 @@ namespace Falcor
         bool setPerMaterialData(const CurrentWorkingData& currentData, const Material* pMaterial) override
         {
             mMaterialChanged = true;
+            currentData.pVars->setParameterBlock("gMaterial", pMaterial->getParameterBlock());
             if (currentData.pMaterial->getAlphaMap())
             {
                 float alphaThreshold = currentData.pMaterial->getAlphaThreshold();

@@ -100,7 +100,7 @@ interface IBRDF
 interface IMaterial
 {
     associatedtype EvaluatedMaterial : IBRDF;
-
+    void prepareForDepthPass(ShadingGeometry geom);
     ShadingAttribsImpl<EvaluatedMaterial> prepare(ShadingGeometry geom);
 }
 
@@ -184,7 +184,10 @@ struct Material : IMaterial
     typedef PreparedMaterialData EvaluatedMaterial;
     
     MaterialData materialData;
-
+    void prepareForDepthPass(ShadingGeometry geom)
+    {
+         applyAlphaTest(materialData, geom, geom.P);
+    }
     ShadingAttribsImpl<PreparedMaterialData> prepare(ShadingGeometry geom)
     {
         ShadingAttribsImpl<PreparedMaterialData> shAttr;

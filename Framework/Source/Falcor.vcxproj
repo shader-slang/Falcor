@@ -1040,9 +1040,11 @@
     <None Include="Data\Framework\Shaders\TextRenderer.vs.slang" />
     <None Include="Data\HostDeviceData.slang" />
     <None Include="Data\ShaderCommon.slang" />
+    <None Include="Data\ShaderCommonImpl.slang" />
     <None Include="ShadingUtils\BSDFs.slang" />
     <None Include="ShadingUtils\Cameras.slang" />
     <None Include="ShadingUtils\Helpers.slang" />
+    <None Include="ShadingUtils\Interfaces.slang" />
     <None Include="ShadingUtils\Lights.slang" />
     <None Include="ShadingUtils\Shading.slang" />
   </ItemGroup>

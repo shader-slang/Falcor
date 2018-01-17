@@ -171,7 +171,7 @@ namespace Falcor
                 std::string error = std::string("Program Linkage failed.\n\n");
                 error += getName() + "\n";
                 error += log;
-
+                 
                 if(msgBox(error, MsgBoxType::RetryCancel) == MsgBoxButton::Cancel)
                 {
                     // User has chosen not to retry

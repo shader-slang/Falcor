@@ -25,23 +25,28 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
-__import DefaultVS;
+#include "VertexAttrib.h"
 __import ShaderCommon;
-import ShadowPassCommon;
+__import Effects.CascadedShadowMap;
 
-ShadowPassVSOut main(VS_IN vIn)
+layout(binding = 3) cbuffer PerLightCB : register(b0)
 {
-    ShadowPassVSOut vOut; 
-    float4x4 worldMat = getWorldMat(vIn);
-    vOut.pos = mul(vIn.pos, worldMat);
-#ifdef _APPLY_PROJECTION
-    vOut.pos = mul(vOut.pos, gCam.viewProjMat);
-#endif
+    CsmData gCsmData;
+};
 
-#ifdef HAS_TEXCRD
-    vOut.texC = vIn.texC;
+struct ShadowPassPSIn
+{
+    float2 texC : TexCoord;
+    float4 pos : SV_POSITION;
+    uint rtIndex : SV_RenderTargetArrayIndex;
+};
+
+struct ShadowPassVSOut
+{
+    float2 texC : TEXCOORD;
+#ifdef _APPLY_PROJECTION
+    float4 pos : SV_POSITION;
 #else
-    vOut.texC = float2(0.5f, 0.5f);
+    float4 pos : POSITION;
 #endif
-    return vOut;
-}
+};

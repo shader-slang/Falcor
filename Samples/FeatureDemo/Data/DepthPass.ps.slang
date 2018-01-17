@@ -29,11 +29,13 @@ __import DefaultVS;
 __import ShaderCommon;
 __import Shading;
 __import Helpers;
+__import Interfaces;
 
 void main(float2 texC : TEXCRD, float3 posW : POSITION)
 {
-    ShadingAttribs attr;
-    attr.lodBias = 0;
-    attr.UV = texC;
-    applyAlphaTest(gMaterial, attr, posW);
+    ShadingGeometry geom;
+    geom.lodBias = 0;
+    geom.UV = texC;
+    geom.P = posW;
+    gMaterial.prepareForDepthPass(geom);
 }

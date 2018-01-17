@@ -28,24 +28,7 @@
 #include "VertexAttrib.h"
 __import ShaderCommon;
 __import Effects.CascadedShadowMap;
-
-layout(binding = 3) cbuffer PerLightCB : register(b0)
-{
-    CsmData gCsmData;
-};
-
-struct ShadowPassPSIn
-{
-    float2 texC : TexCoord;
-    float4 pos : SV_POSITION;
-    uint rtIndex : SV_RenderTargetArrayIndex;
-};
-
-struct ShadowPassVSOut
-{
-    float2 texC : TEXCOORD;
-    float4 pos : POSITION;
-};
+import ShadowPassCommon;
 
 [instance(_CASCADE_COUNT)]
 [maxvertexcount(3)]

@@ -50,7 +50,7 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
     PsOut psOut;
 
     ShadingAttribs shAttr;
-    prepareShadingAttribs(gMaterial, vOut.vsData.posW, gCam.position, vOut.vsData.normalW, vOut.vsData.bitangentW, vOut.vsData.texC, shAttr);
+    prepareShadingAttribs<TMaterial>(gMaterial, vOut.vsData.posW, gCam.position, vOut.vsData.normalW, vOut.vsData.bitangentW, vOut.vsData.texC, shAttr);
 
     ShadingOutput result;
     result.finalValue = 0;
@@ -68,7 +68,7 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
 #ifdef _ENABLE_SHADOWS
         if (l == 0)
         {
-            shadowFactor = calcShadowFactor(gCsmData, vOut.shadowsDepthC, shAttr.P, vOut.vsData.posH.xy / vOut.vsData.posH.w);
+            shadowFactor = calcShadowFactor(gCsmData, vOut.shadowsDepthC, shAttr.geom.P, vOut.vsData.posH.xy / vOut.vsData.posH.w);
             shadowFactor *= opacity;
             envMapFactor -= 1 - shadowFactor;
         }
@@ -83,7 +83,7 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
 
 #ifdef _ENABLE_REFLECTIONS
     // Calculate the view vector
-    float3 view = reflect(-shAttr.E, shAttr.N);
+    float3 view = reflect(-shAttr.geom.E, shAttr.geom.N);
     float2 texC = dirToSphericalCrd(view);
     float rough = shAttr.preparedMat.values.layers[1].albedo.a;
     uint h,w, mipCount;

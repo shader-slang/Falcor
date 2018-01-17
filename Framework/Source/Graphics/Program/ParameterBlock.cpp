@@ -146,6 +146,8 @@ namespace Falcor
                 typeName = structType->getName();
             else if (auto genericType = paramBlockType->asGenericType())
                 typeName = genericType->name;
+            if (typeName == "TMaterial")
+                printf("break");
         }
         // Initialize the resource vectors
         const auto& setLayouts = pReflection->getDescriptorSetLayouts();
