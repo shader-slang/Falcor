@@ -95,7 +95,8 @@ namespace Falcor
         {
             logWarning("ComputeContext::prepareForDispatch() - applying ComputeVars failed, most likely because we ran out of descriptors. Flushing the GPU and retrying");
             flush(true);
-            bool b = mpComputeVars->apply(const_cast<ComputeContext*>(this), mBindComputeRootSig, rootSignature);
+            rootSignature->bindForCompute(this);
+            bool b = mpComputeVars->apply(const_cast<ComputeContext*>(this), true, rootSignature);
             assert(b);
         }
     }
