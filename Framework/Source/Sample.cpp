@@ -350,6 +350,7 @@ namespace Falcor
 
     void Sample::renderFrame()
     {
+        gEventCounter.Clear();
         if (gpDevice && gpDevice->isWindowOccluded())
         {
             return;
@@ -458,16 +459,21 @@ namespace Falcor
 
     const std::string Sample::getFpsMsg() const
     {
-        std::string s;
+        std::stringstream strstr;
         if (mShowText)
-        {
-            std::stringstream strstr;
+        { 
             float msPerFrame = mFrameRate.getAverageFrameTime();
             std::string msStr = std::to_string(msPerFrame);
-            s = std::to_string(int(ceil(1000 / msPerFrame))) + " FPS (" + msStr.erase(msStr.size() - 4) + " ms/frame)";
-            if (mVsyncOn) s += std::string(", VSync");
+            strstr << std::to_string(int(ceil(1000 / msPerFrame))) + " FPS (" + msStr.erase(msStr.size() - 4) + " ms/frame)";
+            if (mVsyncOn) strstr << std::string(", VSync");
+
+            strstr << " descHeapAlloc: " << gEventCounter.numDescriptorHeapAllocations <<
+                " drawCalls: " << gEventCounter.numDrawCalls << " materialChanges: " << gEventCounter.numMaterialChanges
+                << " rootSigChanges: " << gEventCounter.numRootSignatureChanges << " numFlushes: " << gEventCounter.numFlushes
+                << " paramUpd: " << gEventCounter.numParamBlockUpdates
+                << " dscTbls: " << gEventCounter.numDescriptorTables << " dscs: " << gEventCounter.numDescriptors;
         }
-        return s;
+        return strstr.str();
     }
 
     void Sample::toggleText(bool enabled)

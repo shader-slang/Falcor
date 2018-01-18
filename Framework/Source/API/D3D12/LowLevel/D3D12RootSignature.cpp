@@ -189,6 +189,7 @@ namespace Falcor
 
     void RootSignature::bindForGraphics(CopyContext* pCtx)
     {
+        gEventCounter.numRootSignatureChanges++;
         bindRootSigCommon<true>(pCtx, mApiHandle);
     }
 }

@@ -49,16 +49,16 @@ struct CsmData
     //Only uses xy
     float4 cascadeRange[CSM_MAX_CASCADES];  // In camera clip-space
 
-    float depthBias DEFAULTS(0.005f);
+    float depthBias DEFAULTS(0.001f);
     int cascadeCount DEFAULTS(4);
     uint32_t filterMode DEFAULTS(CsmFilterHwPcf);
     int32_t pcfKernelWidth DEFAULTS(5);
-    
+
     float3 lightDir;
     float lightBleedingReduction DEFAULTS(0);
 
     float2 evsmExponents DEFAULTS(v2(40.0f, 5.0f)); // posExp, negExp
-    float cascadeBlendThreshold DEFAULTS(0.2f);
+    float cascadeBlendThreshold DEFAULTS(0.001f);
     uint32_t padding;
 
 #ifndef HOST_CODE
