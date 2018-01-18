@@ -1,16 +1,23 @@
-$rootPath = "D:\git_repo\faclor-slang\falcor"
-$mediaPath = $rootPath + "\Media\Scenes\"
-$binDir = $rootPath + "\Bin\x64\Release\FeatureDemo.exe"
-$scenes = @("Bistro\Bistro_Interior.fscene", "Bistro\Bistro_Exterior.fscene", "SunTemple\SunTemple.fscene")
-$sceneNames = @("Bistro_Int", "Bistro_Ext", "SunTemple")
+$rootPath = @("D:\git_repo\faclor-slang\falcor", "D:\git_repo\falcor-preslang\falcor")
+$mediaPath = $rootPath[0] + "\Media\Scenes\"
 
-"" > 'benchmarkResult.txt'
-
+$scenes = @("bumpyplane.fscene", "Bistro\Bistro_Interior.fscene", "Bistro\Bistro_Exterior.fscene", "SunTemple\SunTemple.fscene")
+$sceneNames = @("BumpyPlane", "Bistro_Int", "Bistro_Ext", "SunTemple")
+"" > benchmarkResult.txt
 For ($i = 0; $i -lt $scenes.Length; $i++) {
-    $sceneFile = $mediaPath + $scenes[$i]
-    & $binDir -benchmark -scene $sceneFile | Out-Null
-    $sceneNames[$i] >> 'benchmarkResult.txt'
-    " " >> 'benchmarkResult.txt'
-    Get-Content "times.txt" >> 'benchmarkResult.txt'
-    "`n" >> 'benchmarkResult.txt'
+    For ($j = 0; $j -lt $rootPath.Length; $j++) {
+        $binDir = $rootPath[$j] + "\Bin\x64\Release\FeatureDemo.exe"
+        $sceneFile = $mediaPath + $scenes[$i]
+        & $binDir -benchmark -scene $sceneFile | Out-Null
+        Add-Content -Path benchmarkResult.txt -Value $sceneNames[$i] -NoNewline
+        Add-Content -Path benchmarkResult.txt -Value " " -NoNewline
+        If ($j -eq 0) {
+            Add-Content -Path benchmarkResult.txt -Value "refactored " -NoNewline
+        }
+        else {
+            Add-Content -Path benchmarkResult.txt -Value "original " -NoNewline
+        }
+        $line = Get-Content "times.txt"
+        Add-Content -Path benchmarkResult.txt -Value $line
+    }
 }

@@ -354,8 +354,8 @@ namespace Falcor
         {
             return;
         }
-        const int timingStartFrame = 20;
-        const int timingTotalFrames = 30;
+        const int timingStartFrame = 30;
+        const int timingTotalFrames = 500;
         LARGE_INTEGER startTime;
         QueryPerformanceCounter(&startTime);
         mFrameRate.newFrame();
@@ -421,7 +421,7 @@ namespace Falcor
                     fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f", minCpuTime*1000.0, maxCpuTime*1000.0, totalCpuTime*1000.0 / frameCount,
                         minFullFrameTime*1000.0, maxFullFrameTime*1000.0, totalFullFrameTime*1000.0 / frameCount);
                     fclose(f);
-                    exit(0);
+                    shutdownApp();
                 }
             }
         }

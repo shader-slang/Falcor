@@ -238,9 +238,6 @@ namespace Falcor
                 MaterialSystem::patchProgram(currentData.pState->getProgram().get(), mpLastMaterial);
             }
         }
-        auto paramBlock = currentData.pVars->getParameterBlock("gMaterial");
-        if (paramBlock->typeName == "TMaterial")
-            printf("break");
         executeDraw(currentData, pMesh->getIndexCount(), instanceCount);
         postFlushDraw(currentData);
         currentData.pState->getProgram()->removeDefine("_MS_STATIC_MATERIAL_DESC");

@@ -204,7 +204,7 @@ private:
     std::vector<ProgramControl> mControls;
     void applyLightingProgramControl(ControlID controlID);
 
-    bool mUseCameraPath = true;
+    bool mUseCameraPath = false;
     void applyCameraPathState();
     bool mPerMaterialShader = false;
     bool mEnableDepthPass = true;
