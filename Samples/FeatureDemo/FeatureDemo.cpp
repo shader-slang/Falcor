@@ -592,8 +592,13 @@ int main(int argc, char** argv)
 {
     FeatureDemo sample;
     SampleConfig config;
-    config.windowDesc.title = "Falcor Feature Demo";
+    config.windowDesc.title = "Falcor Feature Demo (+Slang)";
     config.windowDesc.resizableWindow = false;
+
+    // When diagnosing release-only failures, it may help to turn
+    // on the D3D12 validation layer.
+//    config.deviceDesc.enableDebugLayer = true;
+
 #ifdef _WIN32
     sample.run(config);
 #else
