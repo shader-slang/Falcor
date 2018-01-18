@@ -85,7 +85,7 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
     // Calculate the view vector
     float3 view = reflect(-shAttr.geom.E, shAttr.geom.N);
     float2 texC = dirToSphericalCrd(view);
-    float rough = shAttr.preparedMat.values.layers[1].albedo.a;
+    float rough = shAttr.preparedMat.getRoughness();
     uint h,w, mipCount;
     gEnvMap.GetDimensions(0, h, w, mipCount);
     float lod = rough * mipCount;
@@ -97,7 +97,7 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
 #endif
 
     // add ambient
-    finalColor.rgb += gAmbientLighting * getDiffuseColor(shAttr).rgb;
+    finalColor.rgb += gAmbientLighting * shAttr.preparedMat.getAlbedo().rgb;
 
     psOut.color = finalColor;
     psOut.normal = float4(vOut.vsData.normalW * 0.5f + 0.5f, 1.0f);

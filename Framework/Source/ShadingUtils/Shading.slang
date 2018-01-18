@@ -95,6 +95,7 @@ interface IBRDF
 {
     void eval(ShadingGeometry geom, LightAttribs lAttr, inout ShadingOutput result);
     float4 getAlbedo();
+    float getRoughness();
 }
 
 interface IMaterial
@@ -147,6 +148,11 @@ struct PreparedMaterialData : IBRDF
         evalDefaultMaterial(shAttr, lAttr, result, false);
     }
 
+    float getRoughness()
+    {
+        return values.layers[desc.layerIdByType[MatConductor].id].albedo.a;
+    }
+    
     float4 getAlbedo()
     {
         return values.layers[desc.layerIdByType[MatLambert].id].albedo;
