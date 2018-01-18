@@ -61,7 +61,7 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
     opacity = getDiffuseColor(shAttr).a;
 #endif
 
-    [unroll]
+    //[unroll]
     for (uint l = 0; l < _LIGHT_COUNT; l++)
     {
         float shadowFactor = 1;
