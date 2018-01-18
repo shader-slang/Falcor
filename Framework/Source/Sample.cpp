@@ -43,6 +43,7 @@ namespace Falcor
 {
     Sample::Sample()
     {
+        QueryPerformanceFrequency(&timerFreq);
     }
 
     void Sample::handleWindowSizeChange()
@@ -353,7 +354,10 @@ namespace Falcor
         {
             return;
         }
-
+        const int timingStartFrame = 20;
+        const int timingTotalFrames = 30;
+        LARGE_INTEGER startTime;
+        QueryPerformanceCounter(&startTime);
         mFrameRate.newFrame();
         {
             PROFILE(onFrameRender);
@@ -389,12 +393,39 @@ namespace Falcor
         {
             captureScreen();
         }
-
+        LARGE_INTEGER endCpuTime;
+        QueryPerformanceCounter(&endCpuTime);
         if(gpDevice)
         {
             PROFILE(present);
             gpDevice->present();
         }
+        LARGE_INTEGER endFullTime;
+        QueryPerformanceCounter(&endFullTime);
+        if (bTimingMode)
+        {
+            double cpuTime = (endCpuTime.QuadPart - startTime.QuadPart) / (double)timerFreq.QuadPart;
+            double fullTime = (endFullTime.QuadPart - startTime.QuadPart) / (double)timerFreq.QuadPart;
+            if (frameId >= timingStartFrame)
+            {
+                maxCpuTime = std::max(maxCpuTime, cpuTime);
+                minCpuTime = std::min(minCpuTime, cpuTime);
+                totalCpuTime += cpuTime;
+                maxFullFrameTime = std::max(maxFullFrameTime, fullTime);
+                minFullFrameTime = std::min(minFullFrameTime, fullTime);
+                totalFullFrameTime += fullTime;
+                int frameCount = frameId - timingStartFrame + 1;
+                if (frameCount == timingTotalFrames)
+                {
+                    FILE* f = fopen("times.txt", "wb");
+                    fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f", minCpuTime*1000.0, maxCpuTime*1000.0, totalCpuTime*1000.0 / frameCount,
+                        minFullFrameTime*1000.0, maxFullFrameTime*1000.0, totalFullFrameTime*1000.0 / frameCount);
+                    fclose(f);
+                    exit(0);
+                }
+            }
+        }
+        frameId++;
     }
 
     std::string Sample::captureScreen(const std::string explicitFilename, const std::string explicitOutputDirectory)
