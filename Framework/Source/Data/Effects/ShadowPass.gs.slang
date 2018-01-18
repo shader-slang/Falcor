@@ -30,9 +30,15 @@ __import ShaderCommon;
 __import Effects.CascadedShadowMap;
 import ShadowPassCommon;
 
+struct ShadowPassVSOut1
+{
+    float2 texC : TEXCOORD;
+    float4 pos : POSITION;
+};
+
 [instance(_CASCADE_COUNT)]
 [maxvertexcount(3)]
-void main(triangle ShadowPassVSOut input[3], uint InstanceID : SV_GSInstanceID, inout TriangleStream<ShadowPassPSIn> outStream)
+void main(triangle ShadowPassVSOut1 input[3], uint InstanceID : SV_GSInstanceID, inout TriangleStream<ShadowPassPSIn> outStream)
 {
     ShadowPassPSIn outputData;
 

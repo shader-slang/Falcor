@@ -40,13 +40,3 @@ struct ShadowPassPSIn
     float4 pos : SV_POSITION;
     uint rtIndex : SV_RenderTargetArrayIndex;
 };
-
-struct ShadowPassVSOut
-{
-    float2 texC : TEXCOORD;
-#ifdef _APPLY_PROJECTION
-    float4 pos : SV_POSITION;
-#else
-    float4 pos : POSITION;
-#endif
-};
