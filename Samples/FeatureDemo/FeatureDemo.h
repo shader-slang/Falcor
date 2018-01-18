@@ -197,14 +197,14 @@ private:
 
     float mEnvMapFactorScale = 0.25f;
     float mOpacityScale = 0.5f;
-    AAMode mAAMode = AAMode::TAA;
+    AAMode mAAMode = AAMode::MSAA;
     uint32_t mMSAASampleCount = 4;
     SamplePattern mTAASamplePattern = SamplePattern::Halton;
     void applyAaMode();
     std::vector<ProgramControl> mControls;
     void applyLightingProgramControl(ControlID controlID);
 
-    bool mUseCameraPath = true;
+    bool mUseCameraPath = false;
     void applyCameraPathState();
     bool mPerMaterialShader = false;
     bool mEnableDepthPass = true;

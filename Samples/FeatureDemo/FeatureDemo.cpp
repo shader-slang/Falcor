@@ -246,6 +246,14 @@ void FeatureDemo::onLoad()
 
     initPostProcess();
     initializeTesting();
+
+    if (mArgList.argExists("benchmark"))
+        bTimingMode = true;
+    auto file = mArgList.getValues("scene");
+    if (file.size())
+    {
+        loadScene(file.begin()->asString(), true);
+    }
 }
 
 void FeatureDemo::renderSkyBox()
