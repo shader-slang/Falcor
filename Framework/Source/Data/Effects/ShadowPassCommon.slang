@@ -25,28 +25,18 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
+#include "VertexAttrib.h"
 __import ShaderCommon;
-__import Shading;
-__import DefaultVS;
-import Interfaces;
+__import Effects.CascadedShadowMap;
 
-float4 main(VS_OUT vOut) : SV_TARGET
+layout(binding = 3) cbuffer PerLightCB : register(b0)
 {
-    ShadingAttribs shAttr;
-    prepareShadingAttribs<TMaterial>(gMaterial, vOut.posW, gCam.position, vOut.normalW, vOut.bitangentW, vOut.texC, shAttr);
+    CsmData gCsmData;
+};
 
-    ShadingOutput result;
-    result.finalValue = 0;
-    float4 finalColor = 0;
-
-    for (uint l = 0; l < gLightsCount; l++)
-    {
-        evalMaterial(shAttr, gLights[l], result, l == 0);
-    }
-
-    finalColor = float4(result.finalValue, 1.f);
-
-    // add ambient
-    finalColor.rgb += gAmbientLighting * getDiffuseColor(shAttr).rgb;
-    return finalColor;
-}
+struct ShadowPassPSIn
+{
+    float2 texC : TexCoord;
+    float4 pos : SV_POSITION;
+    uint rtIndex : SV_RenderTargetArrayIndex;
+};

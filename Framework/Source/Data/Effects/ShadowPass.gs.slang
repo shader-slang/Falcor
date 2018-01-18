@@ -28,20 +28,9 @@
 #include "VertexAttrib.h"
 __import ShaderCommon;
 __import Effects.CascadedShadowMap;
+import ShadowPassCommon;
 
-layout(binding = 3) cbuffer PerLightCB : register(b0)
-{
-    CsmData gCsmData;
-};
-
-struct ShadowPassPSIn
-{
-    float2 texC : TexCoord;
-    float4 pos : SV_POSITION;
-    uint rtIndex : SV_RenderTargetArrayIndex;
-};
-
-struct ShadowPassVSOut
+struct ShadowPassVSOut1
 {
     float2 texC : TEXCOORD;
     float4 pos : POSITION;
@@ -49,7 +38,7 @@ struct ShadowPassVSOut
 
 [instance(_CASCADE_COUNT)]
 [maxvertexcount(3)]
-void main(triangle ShadowPassVSOut input[3], uint InstanceID : SV_GSInstanceID, inout TriangleStream<ShadowPassPSIn> outStream)
+void main(triangle ShadowPassVSOut1 input[3], uint InstanceID : SV_GSInstanceID, inout TriangleStream<ShadowPassPSIn> outStream)
 {
     ShadowPassPSIn outputData;
 

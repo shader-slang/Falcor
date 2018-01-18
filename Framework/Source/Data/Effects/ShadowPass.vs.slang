@@ -27,6 +27,7 @@
 ***************************************************************************/
 __import DefaultVS;
 __import ShaderCommon;
+import ShadowPassCommon;
 
 struct ShadowPassVSOut
 {

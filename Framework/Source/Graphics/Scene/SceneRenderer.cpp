@@ -225,12 +225,12 @@ namespace Falcor
     {
         currentData.pMaterial = pMesh->getMaterial().get();
         // Bind material
-        if(mpLastMaterial != pMesh->getMaterial().get())
+        if (setPerMaterialData(currentData, currentData.pMaterial) == false)
         {
-            if (setPerMaterialData(currentData, currentData.pMaterial) == false)
-            {
-                return;
-            }
+            return;
+        }
+        if(mpLastMaterial != pMesh->getMaterial().get())
+        {   
             mpLastMaterial = pMesh->getMaterial().get();
 
             if(mCompileMaterialWithProgram)
@@ -238,7 +238,6 @@ namespace Falcor
                 MaterialSystem::patchProgram(currentData.pState->getProgram().get(), mpLastMaterial);
             }
         }
-
         executeDraw(currentData, pMesh->getIndexCount(), instanceCount);
         postFlushDraw(currentData);
         currentData.pState->getProgram()->removeDefine("_MS_STATIC_MATERIAL_DESC");

@@ -2245,5 +2245,11 @@
     <None Include="Data\Framework\Shaders\MaterialBlock.slang">
       <Filter>Data\Framework\Shaders</Filter>
     </None>
+    <None Include="ShadingUtils\Interfaces.slang">
+      <Filter>ShadingUtils</Filter>
+    </None>
+    <None Include="Data\ShaderCommonImpl.slang">
+      <Filter>Data</Filter>
+    </None>
   </ItemGroup>
 </Project>
