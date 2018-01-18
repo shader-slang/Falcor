@@ -189,6 +189,11 @@ namespace Falcor
         ArgList mArgList;                                   ///< Arguments passed in by command line
         Window::SharedPtr mpWindow;                         ///< The application's window
 
+        bool bTimingMode = false;
+        int frameId = 0;
+        LARGE_INTEGER timerFreq;
+        double maxCpuTime = 0.0, minCpuTime = 1e30, totalCpuTime = 0.0;
+        double maxFullFrameTime = 0.0, minFullFrameTime = 1e30, totalFullFrameTime = 0.0;
     protected:
         void renderFrame() override;
         void handleWindowSizeChange() override;
