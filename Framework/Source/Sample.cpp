@@ -407,7 +407,8 @@ namespace Falcor
         {
             double cpuTime = (endCpuTime.QuadPart - startTime.QuadPart) / (double)timerFreq.QuadPart;
             double fullTime = (endFullTime.QuadPart - startTime.QuadPart) / (double)timerFreq.QuadPart;
-            if (gEventCounter.numFlushes != 0)
+
+            if (gEventCounter.numFlushes <= 1)
             {
                 frameId--;
             }
