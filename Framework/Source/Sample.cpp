@@ -407,22 +407,29 @@ namespace Falcor
         {
             double cpuTime = (endCpuTime.QuadPart - startTime.QuadPart) / (double)timerFreq.QuadPart;
             double fullTime = (endFullTime.QuadPart - startTime.QuadPart) / (double)timerFreq.QuadPart;
-            if (frameId >= timingStartFrame)
+            if (gEventCounter.numFlushes != 0)
             {
-                maxCpuTime = std::max(maxCpuTime, cpuTime);
-                minCpuTime = std::min(minCpuTime, cpuTime);
-                totalCpuTime += cpuTime;
-                maxFullFrameTime = std::max(maxFullFrameTime, fullTime);
-                minFullFrameTime = std::min(minFullFrameTime, fullTime);
-                totalFullFrameTime += fullTime;
-                int frameCount = frameId - timingStartFrame + 1;
-                if (frameCount == timingTotalFrames)
+                frameId--;
+            }
+            else
+            {
+                if (frameId >= timingStartFrame)
                 {
-                    FILE* f = fopen("times.txt", "wb");
-                    fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f", minCpuTime*1000.0, maxCpuTime*1000.0, totalCpuTime*1000.0 / frameCount,
-                        minFullFrameTime*1000.0, maxFullFrameTime*1000.0, totalFullFrameTime*1000.0 / frameCount);
-                    fclose(f);
-                    shutdownApp();
+                    maxCpuTime = std::max(maxCpuTime, cpuTime);
+                    minCpuTime = std::min(minCpuTime, cpuTime);
+                    totalCpuTime += cpuTime;
+                    maxFullFrameTime = std::max(maxFullFrameTime, fullTime);
+                    minFullFrameTime = std::min(minFullFrameTime, fullTime);
+                    totalFullFrameTime += fullTime;
+                    int frameCount = frameId - timingStartFrame + 1;
+                    if (frameCount == timingTotalFrames)
+                    {
+                        FILE* f = fopen("times.txt", "wb");
+                        fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f", minCpuTime*1000.0, maxCpuTime*1000.0, totalCpuTime*1000.0 / frameCount,
+                            minFullFrameTime*1000.0, maxFullFrameTime*1000.0, totalFullFrameTime*1000.0 / frameCount);
+                        fclose(f);
+                        shutdownApp();
+                    }
                 }
             }
         }
