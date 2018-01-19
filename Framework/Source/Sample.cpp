@@ -350,6 +350,7 @@ namespace Falcor
 
     void Sample::renderFrame()
     {
+        gEventCounter.Clear();
         if (gpDevice && gpDevice->isWindowOccluded())
         {
             return;
@@ -406,22 +407,29 @@ namespace Falcor
         {
             double cpuTime = (endCpuTime.QuadPart - startTime.QuadPart) / (double)timerFreq.QuadPart;
             double fullTime = (endFullTime.QuadPart - startTime.QuadPart) / (double)timerFreq.QuadPart;
-            if (frameId >= timingStartFrame)
+            if (gEventCounter.numFlushes != 0)
             {
-                maxCpuTime = std::max(maxCpuTime, cpuTime);
-                minCpuTime = std::min(minCpuTime, cpuTime);
-                totalCpuTime += cpuTime;
-                maxFullFrameTime = std::max(maxFullFrameTime, fullTime);
-                minFullFrameTime = std::min(minFullFrameTime, fullTime);
-                totalFullFrameTime += fullTime;
-                int frameCount = frameId - timingStartFrame + 1;
-                if (frameCount == timingTotalFrames)
+                frameId--;
+            }
+            else
+            {
+                if (frameId >= timingStartFrame)
                 {
-                    FILE* f = fopen("times.txt", "wb");
-                    fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f", minCpuTime*1000.0, maxCpuTime*1000.0, totalCpuTime*1000.0 / frameCount,
-                        minFullFrameTime*1000.0, maxFullFrameTime*1000.0, totalFullFrameTime*1000.0 / frameCount);
-                    fclose(f);
-                    shutdownApp();
+                    maxCpuTime = std::max(maxCpuTime, cpuTime);
+                    minCpuTime = std::min(minCpuTime, cpuTime);
+                    totalCpuTime += cpuTime;
+                    maxFullFrameTime = std::max(maxFullFrameTime, fullTime);
+                    minFullFrameTime = std::min(minFullFrameTime, fullTime);
+                    totalFullFrameTime += fullTime;
+                    int frameCount = frameId - timingStartFrame + 1;
+                    if (frameCount == timingTotalFrames)
+                    {
+                        FILE* f = fopen("times.txt", "wb");
+                        fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f", minCpuTime*1000.0, maxCpuTime*1000.0, totalCpuTime*1000.0 / frameCount,
+                            minFullFrameTime*1000.0, maxFullFrameTime*1000.0, totalFullFrameTime*1000.0 / frameCount);
+                        fclose(f);
+                        shutdownApp();
+                    }
                 }
             }
         }
@@ -458,16 +466,21 @@ namespace Falcor
 
     const std::string Sample::getFpsMsg() const
     {
-        std::string s;
+        std::stringstream strstr;
         if (mShowText)
         {
-            std::stringstream strstr;
             float msPerFrame = mFrameRate.getAverageFrameTime();
             std::string msStr = std::to_string(msPerFrame);
-            s = std::to_string(int(ceil(1000 / msPerFrame))) + " FPS (" + msStr.erase(msStr.size() - 4) + " ms/frame)";
-            if (mVsyncOn) s += std::string(", VSync");
+            strstr << std::to_string(int(ceil(1000 / msPerFrame))) + " FPS (" + msStr.erase(msStr.size() - 4) + " ms/frame)";
+            if (mVsyncOn) strstr << std::string(", VSync");
+
+            strstr << " descHeapAlloc: " << gEventCounter.numDescriptorHeapAllocations <<
+                " drawCalls: " << gEventCounter.numDrawCalls << " materialChanges: " << gEventCounter.numMaterialChanges
+                << " rootSigChanges: " << gEventCounter.numRootSignatureChanges << " numFlushes: " << gEventCounter.numFlushes
+                << " paramUpd: " << gEventCounter.numParamBlockUpdates
+                << " dscTbls: " << gEventCounter.numDescriptorTables << " dscs: " << gEventCounter.numDescriptors;
         }
-        return s;
+        return strstr.str();
     }
 
     void Sample::toggleText(bool enabled)

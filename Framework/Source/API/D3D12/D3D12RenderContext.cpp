@@ -264,22 +264,26 @@ namespace Falcor
     void RenderContext::drawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation)
     {
         prepareForDraw();
+        gEventCounter.numDrawCalls++;
         mpLowLevelData->getCommandList()->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
     }
 
     void RenderContext::draw(uint32_t vertexCount, uint32_t startVertexLocation)
     {
+        gEventCounter.numDrawCalls++;
         drawInstanced(vertexCount, 1, startVertexLocation, 0);
     }
 
     void RenderContext::drawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, int32_t baseVertexLocation, uint32_t startInstanceLocation)
     {
         prepareForDraw();
+        gEventCounter.numDrawCalls++;
         mpLowLevelData->getCommandList()->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
     }
 
     void RenderContext::drawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation)
     {
+        gEventCounter.numDrawCalls++;
         drawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
     }
 
@@ -287,6 +291,7 @@ namespace Falcor
     {
         prepareForDraw();
         resourceBarrier(argBuffer, Resource::State::IndirectArg);
+        gEventCounter.numDrawCalls++;
         mpLowLevelData->getCommandList()->ExecuteIndirect(spDrawCommandSig, 1, argBuffer->getApiHandle(), argBufferOffset, nullptr, 0);
     }
 
@@ -294,6 +299,7 @@ namespace Falcor
     {
         prepareForDraw();
         resourceBarrier(argBuffer, Resource::State::IndirectArg);
+        gEventCounter.numDrawCalls++;
         mpLowLevelData->getCommandList()->ExecuteIndirect(spDrawIndexCommandSig, 1, argBuffer->getApiHandle(), argBufferOffset, nullptr, 0);
     }
 
