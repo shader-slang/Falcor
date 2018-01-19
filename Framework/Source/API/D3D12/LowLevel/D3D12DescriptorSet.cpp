@@ -109,6 +109,7 @@ namespace Falcor
 
     void DescriptorSet::bindForGraphics(CopyContext* pCtx, const RootSignature* pRootSig, uint32_t rootIndex)
     {
+        gEventCounter.numSetRootDescriptorTableCalls++;
         pCtx->getLowLevelData()->getCommandList()->SetGraphicsRootDescriptorTable(rootIndex, getGpuHandle(0));
     }
 

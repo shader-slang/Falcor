@@ -110,6 +110,8 @@ namespace Falcor
             }
         }
 
+        gEventCounter.numDescriptorChunkSwitches++;
+
         // Need a new chunk
         uint32_t chunkCount = (descCount + kDescPerChunk - 1) / kDescPerChunk;
 
@@ -125,6 +127,7 @@ namespace Falcor
         // No free chunks. Allocate
         if (mAllocatedChunks + chunkCount > mChunkCount)
         {
+            gEventCounter.numOutOfChunks++;
             return false;
         }
 
