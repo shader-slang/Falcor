@@ -190,7 +190,7 @@ namespace Falcor
     void Device::present()
     {
         mpRenderContext->resourceBarrier(mpSwapChainFbos[mCurrentBackBufferIndex]->getColorTexture(0).get(), Resource::State::Present);
-        mpRenderContext->flush();
+        mpRenderContext->flush(true);
         apiPresent();
         mpFrameFence->gpuSignal(mpRenderContext->getLowLevelData()->getCommandQueue());
         executeDeferredReleases();
