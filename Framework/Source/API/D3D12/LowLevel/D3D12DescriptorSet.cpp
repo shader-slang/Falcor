@@ -63,6 +63,7 @@ namespace Falcor
 
         D3D12DescriptorHeap* pHeap = getHeap(mpPool.get(), falcorType);
         mpApiData->pAllocation = pHeap->allocateDescriptors(count);
+        gEventCounter.numDescriptorTables++;
         if (mpApiData->pAllocation == false)
         {
             // Execute deferred releases and try again

@@ -39,6 +39,7 @@ namespace Falcor
 
     DescriptorSet::~DescriptorSet()
     {
+        gEventCounter.numDescriptorTables--;
         mpPool->releaseAllocation(mpApiData);
     }
 
