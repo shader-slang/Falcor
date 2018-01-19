@@ -478,7 +478,9 @@ namespace Falcor
                 " drawCalls: " << gEventCounter.numDrawCalls << " materialChanges: " << gEventCounter.numMaterialChanges
                 << " rootSigChanges: " << gEventCounter.numRootSignatureChanges << " numFlushes: " << gEventCounter.numFlushes
                 << " paramUpd: " << gEventCounter.numParamBlockUpdates
-                << " dscTbls: " << gEventCounter.numDescriptorTables << " dscs: " << gEventCounter.numDescriptors;
+                << " dscTbls: " << gEventCounter.numDescriptorTables << " dscs: " << gEventCounter.numDescriptors
+                << "\nSetGraphicsRootDescriptorTable calls: " << gEventCounter.numSetRootDescriptorTableCalls
+                << " chunkSwitch: " << gEventCounter.numDescriptorChunkSwitches << " outOfChunks: " << gEventCounter.numOutOfChunks;
         }
         return strstr.str();
     }
