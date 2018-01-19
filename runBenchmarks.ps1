@@ -8,6 +8,7 @@ For ($i = 0; $i -lt $scenes.Length; $i++) {
     For ($j = 0; $j -lt $rootPath.Length; $j++) {
         $binDir = $rootPath[$j] + "\Bin\x64\Release\FeatureDemo.exe"
         $sceneFile = $mediaPath + $scenes[$i]
+        Set-Content times.txt "<crashed>"
         & $binDir -benchmark -scene $sceneFile | Out-Null
         Add-Content -Path benchmarkResult.txt -Value $sceneNames[$i] -NoNewline
         Add-Content -Path benchmarkResult.txt -Value " " -NoNewline

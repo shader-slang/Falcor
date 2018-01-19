@@ -86,7 +86,8 @@ namespace Falcor
         {
             return nullptr;
         }
-
+        gEventCounter.numDescriptorHeapAllocations++;
+        gEventCounter.numDescriptors += count;
         Allocation::SharedPtr pAlloc = Allocation::create(shared_from_this(), mpCurrentChunk->getCurrentAbsoluteIndex(), count, mpCurrentChunk);
 
         // Update the chunk

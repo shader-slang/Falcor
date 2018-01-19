@@ -353,7 +353,7 @@ void FeatureDemo::lightingPass()
         mpSceneRenderer->setRenderMode(FeatureDemoSceneRenderer::Mode::All);
         mpSceneRenderer->renderScene(mpRenderContext.get());
     }
-    //mpRenderContext->flush();
+    mpRenderContext->flush();
     mpState->setDepthStencilState(nullptr);
 }
 
@@ -387,7 +387,7 @@ void FeatureDemo::shadowPass()
     {
         mShadowPass.camVpAtLastCsmUpdate = mpSceneRenderer->getScene()->getActiveCamera()->getViewProjMatrix();
         mShadowPass.pCsm->setup(mpRenderContext.get(), mpSceneRenderer->getScene()->getActiveCamera().get(), mEnableDepthPass ? mpDepthPassFbo->getDepthStencilTexture() : nullptr);
-        //mpRenderContext->flush();
+        mpRenderContext->flush();
     }
 }
 

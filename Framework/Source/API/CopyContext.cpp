@@ -62,6 +62,7 @@ namespace Falcor
         {
             mpLowLevelData->getFence()->syncCpu();
         }
+        gEventCounter.numFlushes++;
     }
     
     void CopyContext::updateTexture(const Texture* pTexture, const void* pData)

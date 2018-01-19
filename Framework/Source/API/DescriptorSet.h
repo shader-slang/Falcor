@@ -61,7 +61,6 @@ namespace Falcor
         using CpuHandle = DescriptorPool::CpuHandle;
         using GpuHandle = DescriptorPool::GpuHandle;
         using ApiHandle = DescriptorSetApiHandle;
-
         ~DescriptorSet();
 
         class Layout

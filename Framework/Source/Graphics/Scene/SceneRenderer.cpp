@@ -232,7 +232,7 @@ namespace Falcor
         if(mpLastMaterial != pMesh->getMaterial().get())
         {   
             mpLastMaterial = pMesh->getMaterial().get();
-
+            gEventCounter.numMaterialChanges++;
             if(mCompileMaterialWithProgram)
             {
                 MaterialSystem::patchProgram(currentData.pState->getProgram().get(), mpLastMaterial);
