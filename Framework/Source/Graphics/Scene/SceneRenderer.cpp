@@ -49,9 +49,6 @@ namespace Falcor
     size_t SceneRenderer::sWorldInvTransposeMatOffset = ConstantBuffer::kInvalidOffset;
     size_t SceneRenderer::sMeshIdOffset = ConstantBuffer::kInvalidOffset;
     size_t SceneRenderer::sDrawIDOffset = ConstantBuffer::kInvalidOffset;
-    size_t SceneRenderer::sLightCountOffset = ConstantBuffer::kInvalidOffset;
-    size_t SceneRenderer::sLightArrayOffset = ConstantBuffer::kInvalidOffset;
-    size_t SceneRenderer::sAmbientLightOffset = ConstantBuffer::kInvalidOffset;
 
     const char* SceneRenderer::kPerMaterialCbName = "InternalPerMaterialCB";
     const char* SceneRenderer::kPerFrameCbName = "InternalPerFrameCB";
@@ -102,12 +99,6 @@ namespace Falcor
             {
                 const ReflectionType* pType = pVar->getType().get();
                 sCameraDataOffset = pType->findMember("gCam.viewMat")->getOffset();
-                const auto& pCountOffset = pType->findMember("gLightsCount");
-                sLightCountOffset = pCountOffset ? pCountOffset->getOffset() : ConstantBuffer::kInvalidOffset;
-                const auto& pLightOffset = pType->findMember("gLights[0].worldPos");
-                sLightArrayOffset = pLightOffset ? pLightOffset->getOffset() : ConstantBuffer::kInvalidOffset;
-                const auto& pAmbientOffset = pType->findMember("gAmbientLighting");
-                sAmbientLightOffset = pAmbientOffset ? pAmbientOffset->getOffset() : ConstantBuffer::kInvalidOffset;
             }
         }
     }
@@ -123,6 +114,7 @@ namespace Falcor
                 currentData.pCamera->setIntoConstantBuffer(pCB, sCameraDataOffset);
             }
 
+#if 0
             // Set lights
             if (sLightArrayOffset != ConstantBuffer::kInvalidOffset)
             {
@@ -140,7 +132,10 @@ namespace Falcor
             {
                 pCB->setVariable(sAmbientLightOffset, mpScene->getAmbientIntensity());
             }
+#endif
         }
+
+        currentData.pVars->setParameterBlock("gLightEnv", currentData.pLightEnv->getParameterBlock());
     }
 
     bool SceneRenderer::setPerModelData(const CurrentWorkingData& currentData)
@@ -328,6 +323,7 @@ namespace Falcor
 
     void SceneRenderer::renderScene(CurrentWorkingData& currentData)
     {
+        currentData.pLightEnv = mpScene->getLightEnv().get();
         setPerFrameData(currentData);
 
         for (uint32_t modelID = 0; modelID < mpScene->getModelCount(); modelID++)

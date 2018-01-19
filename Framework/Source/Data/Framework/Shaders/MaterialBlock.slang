@@ -28,6 +28,7 @@
 #include "HostDeviceData.h"
 __import ShaderCommon;
 ParameterBlock<MaterialData> materialBlock;
+ParameterBlock<LightEnv> lightEnvBlock;
 
 float4 main() : SV_TARGET
 {

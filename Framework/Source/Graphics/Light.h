@@ -41,6 +41,9 @@ namespace Falcor
     class ConstantBuffer;
     class Gui;
 
+    // Sequential ID used to note that something has been changed
+    typedef int64_t VersionID;
+
     /** Base class for light sources. All light sources should inherit from this.
     */
     class Light : public IMovableObject, std::enable_shared_from_this<Light>
@@ -102,6 +105,8 @@ namespace Falcor
         */
         static uint32_t getShaderStructSize() { return kDataSize; }
 
+        VersionID getVersionID() const { return mVersionID; }
+
     protected:
 
         static const size_t kDataSize = sizeof(LightData); //TODO(tfoley) HACK:SPIRE - sizeof(MaterialData);
@@ -118,6 +123,9 @@ namespace Falcor
         glm::vec3 mUiLightIntensityColor = glm::vec3(0.5f, 0.5f, 0.5f);
         float     mUiLightIntensityScale = 1.0f;
         LightData mData;
+
+        VersionID mVersionID = 0;
+        void makeDirty() { mVersionID++; }
     };
 
     /** Directional light source.
@@ -391,5 +399,52 @@ namespace Falcor
         vec3 mTangent;               ///< Unnormalized tangent vector of the light
         vec3 mBitangent;             ///< Unnormalized bitangent vector of the light
         std::vector<float> mMeshCDF; ///< CDF function for importance sampling a triangle mesh
+    };
+
+    // Represent a lighting environment, which is effectively an array of lights
+    class LightEnv : public std::enable_shared_from_this<LightEnv>
+    {
+    public:
+        using SharedPtr = std::shared_ptr<LightEnv>;
+        using SharedConstPtr = std::shared_ptr<const LightEnv>;
+
+        static LightEnv::SharedPtr create();
+
+        void merge(LightEnv const* lightEnv);
+
+        uint32_t addLight(const Light::SharedPtr& pLight);
+        void deleteLight(uint32_t lightID);
+        uint32_t getLightCount() const { return (uint32_t)mpLights.size(); }
+        const Light::SharedPtr& getLight(uint32_t index) const { return mpLights[index]; }
+
+        std::vector<Light::SharedPtr>& getLights() { return mpLights; }
+        const std::vector<Light::SharedPtr>& getLights() const { return mpLights; }
+
+        /**
+            This routine deletes area light(s) from the environment.
+        */
+        void deleteAreaLights();
+
+        /** Get the ParameterBlock object for the lighting environment.
+        */
+        ParameterBlock::SharedConstPtr getParameterBlock() const;
+
+    private:
+        LightEnv();
+        LightEnv(LightEnv const&) = delete;
+
+        std::vector<Light::SharedPtr> mpLights;
+        mutable std::vector<VersionID> mLightVersionIDs;
+
+        mutable VersionID mVersionID = 0;
+        VersionID getVersionID() const;
+
+        mutable ParameterBlock::SharedPtr mpParamBlock;
+        mutable VersionID mParamBlockVersionID = -1;
+        static ParameterBlockReflection::SharedConstPtr spBlockReflection;
+
+        static size_t sLightCountOffset;
+        static size_t sLightArrayOffset;
+        static size_t sAmbientLightOffset;
     };
 }

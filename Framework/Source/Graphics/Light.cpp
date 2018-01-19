@@ -36,6 +36,10 @@
 #include "Data/VertexAttrib.h"
 #include "Graphics/Model/Model.h"
 
+// SLANG-INTEGRATION
+#include "Graphics/Program/ProgramVars.h"
+#include "Graphics/Program/GraphicsProgram.h"
+
 
 namespace Falcor
 {
@@ -579,4 +583,157 @@ namespace Falcor
         vec3 stillUp = vec3(0, 1, 0);
         mpMeshInstance->move(position, stillTarget, stillUp);
     }
+
+    // LightEnv
+
+    LightEnv::SharedPtr LightEnv::create()
+    {
+        return LightEnv::SharedPtr(new LightEnv());
+    }
+
+    LightEnv::LightEnv()
+    {
+    }
+
+    void LightEnv::merge(LightEnv const* lightEnv)
+    {
+        mpLights.insert(mpLights.end(), lightEnv->mpLights.begin(), lightEnv->mpLights.end());
+        mLightVersionIDs.resize(mpLights.size(), -1);
+    }
+
+    uint32_t LightEnv::addLight(const Light::SharedPtr& pLight)
+    {
+        mpLights.push_back(pLight);
+        mLightVersionIDs.push_back(-1);
+        return (uint32_t)mpLights.size() - 1;
+    }
+
+    void LightEnv::deleteLight(uint32_t lightID)
+    {
+        mpLights.erase(mpLights.begin() + lightID);
+        mLightVersionIDs.erase(mLightVersionIDs.begin() + lightID);
+    }
+
+    void LightEnv::deleteAreaLights()
+    {
+        // Clean up the list before adding
+        std::vector<Light::SharedPtr>::iterator it = mpLights.begin();
+        std::vector<VersionID>::iterator vi = mLightVersionIDs.begin();
+
+        for (; it != mpLights.end();)
+        {
+            if ((*it)->getType() == LightArea)
+            {
+                it = mpLights.erase(it);
+                vi = mLightVersionIDs.erase(vi);
+            }
+            else
+            {
+                ++it;
+                ++vi;
+            }
+        }
+    }
+
+    // SLANG-INTEGRATION: forward declare
+    ReflectionType::SharedPtr reflectType(slang::TypeLayoutReflection* pSlangType);
+
+    ParameterBlockReflection::SharedConstPtr LightEnv::spBlockReflection;
+
+    // Field offsets inside the parameter block.
+    // TODO: these will need to be more dynamic once we are building a dynamic type...
+    size_t LightEnv::sLightCountOffset = ConstantBuffer::kInvalidOffset;
+    size_t LightEnv::sLightArrayOffset = ConstantBuffer::kInvalidOffset;
+    size_t LightEnv::sAmbientLightOffset = ConstantBuffer::kInvalidOffset;
+
+    ParameterBlock::SharedConstPtr LightEnv::getParameterBlock() const
+    {
+        auto versionID = getVersionID();
+        if( versionID > mParamBlockVersionID )
+        {
+            mParamBlockVersionID = versionID;
+
+            // SLANG-INTEGRATION
+            if (spBlockReflection == nullptr)
+            {
+                GraphicsProgram::SharedPtr pProgram = GraphicsProgram::createFromFile("", "Framework/Shaders/MaterialBlock.slang");
+                ProgramReflection::SharedConstPtr pReflection = pProgram->getActiveVersion()->getReflector();
+                auto slangReq = pProgram->getActiveVersion()->slangRequest;
+                auto reflection = spGetReflection(slangReq);
+                auto materialType = spReflection_FindTypeByName(reflection, "LightEnv");
+                auto layout = spReflection_GetTypeLayout(reflection, materialType, SLANG_LAYOUT_RULES_DEFAULT);
+                auto blockType = reflectType((slang::TypeLayoutReflection*)layout);
+                auto blockReflection = ParameterBlockReflection::create("");
+                blockReflection->setElementType(blockType);
+                blockReflection->finalize();
+                spBlockReflection = blockReflection;
+                assert(spBlockReflection);
+
+                const auto& pCountOffset = blockType->findMember("lightCount");
+                sLightCountOffset = pCountOffset ? pCountOffset->getOffset() : ConstantBuffer::kInvalidOffset;
+                const auto& pLightOffset = blockType->findMember("lights");
+                sLightArrayOffset = pLightOffset ? pLightOffset->getOffset() : ConstantBuffer::kInvalidOffset;
+                const auto& pAmbientOffset = blockType->findMember("ambientLighting");
+                sAmbientLightOffset = pAmbientOffset ? pAmbientOffset->getOffset() : ConstantBuffer::kInvalidOffset;
+            }
+            mpParamBlock = ParameterBlock::create(spBlockReflection, true);
+
+            // Note: the following logic used to be in the `SceneRenderer`,
+            // and so some stuff doesn't translate directly (e.g., we don't
+            // currently have a representation of ambient lights in the
+            // light environment, but we could/should).
+            //
+            glm::vec3 ambientIntensity = glm::vec3(0.0f);
+
+            ConstantBuffer* pCB = mpParamBlock->getConstantBuffer(mpParamBlock->getReflection()->getName()).get();
+
+            // Set lights
+            if (sLightArrayOffset != ConstantBuffer::kInvalidOffset)
+            {
+                assert(getLightCount() <= MAX_LIGHT_SOURCES);  // Max array size in the shader
+                for (uint_t i = 0; i < getLightCount(); i++)
+                {
+                    getLight(i)->setIntoConstantBuffer(pCB, i * Light::getShaderStructSize() + sLightArrayOffset);
+                }
+            }
+            if (sLightCountOffset != ConstantBuffer::kInvalidOffset)
+            {
+                pCB->setVariable(sLightCountOffset, getLightCount());
+            }
+            if (sAmbientLightOffset != ConstantBuffer::kInvalidOffset)
+            {
+                pCB->setVariable(sAmbientLightOffset, ambientIntensity);
+            }
+
+            // Now fill in that parameter block, I guess...
+        }
+        return mpParamBlock;
+    }
+
+    VersionID LightEnv::getVersionID() const
+    {
+        // check if any light has been modified
+        bool dirty = false;
+
+        auto ll = mpLights.begin(), le = mpLights.end();
+        auto vv = mLightVersionIDs.begin();
+        for(; ll != le; ++ll, ++vv)
+        {
+            auto oldVersionID = *vv;
+            auto newVersionID = (*ll)->getVersionID();
+
+            if( newVersionID > oldVersionID )
+            {
+                dirty = true;
+                *vv = newVersionID;
+            }
+        }
+
+        if( dirty )
+        {
+            mVersionID++;
+        }
+        return mVersionID;
+    }
+
 }

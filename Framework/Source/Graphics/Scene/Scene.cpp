@@ -61,6 +61,8 @@ namespace Falcor
         Model::resetGlobalIdCounter();
 
         mpMaterialHistory = MaterialHistory::create();
+
+        mpLightEnv = LightEnv::create();
     }
 
     Scene::~Scene() = default;
@@ -107,7 +109,7 @@ namespace Falcor
             }
 
             // Update light extents
-            for (auto& light : mpLights)
+            for (auto& light : getLights())
             {
                 if (light->getType() == LightDirectional)
                 {
@@ -252,14 +254,13 @@ namespace Falcor
 
     uint32_t Scene::addLight(const Light::SharedPtr& pLight)
     {
-        mpLights.push_back(pLight);
         mExtentsDirty = true;
-        return (uint32_t)mpLights.size() - 1;
+        return mpLightEnv->addLight(pLight);
     }
 
     void Scene::deleteLight(uint32_t lightID)
     {
-        mpLights.erase(mpLights.begin() + lightID);
+        mpLightEnv->deleteLight(lightID);
         mExtentsDirty = true;
     }
 
@@ -315,11 +316,11 @@ namespace Falcor
 #define merge(name_) name_.insert(name_.end(), pFrom->name_.begin(), pFrom->name_.end());
 
         merge(mModels);
-        merge(mpLights);
         merge(mpPaths);
         merge(mpMaterials);
         merge(mCameras);
 #undef merge
+        mpLightEnv->merge(pFrom->mpLightEnv.get());
         mUserVars.insert(pFrom->mUserVars.begin(), pFrom->mUserVars.end());
         mExtentsDirty = true;
     }
@@ -339,7 +340,7 @@ namespace Falcor
                 for (uint32_t modelInstanceId = 0; modelInstanceId < getModelInstanceCount(modelId); ++modelInstanceId)
                 {
                     // #TODO This should probably create per model instance
-                    AreaLight::createAreaLightsForModel(pModel, mpLights);
+                    AreaLight::createAreaLightsForModel(pModel, mpLightEnv->getLights());
                 }
             }
         }
@@ -347,20 +348,7 @@ namespace Falcor
 
     void Scene::deleteAreaLights()
     {
-        // Clean up the list before adding
-        std::vector<Light::SharedPtr>::iterator it = mpLights.begin();
-
-        for (; it != mpLights.end();)
-        {
-            if ((*it)->getType() == LightArea)
-            {
-                it = mpLights.erase(it);
-            }
-            else
-            {
-                ++it;
-            }
-        }
+        mpLightEnv->deleteAreaLights();
     }
 
     void Scene::bindSamplerToMaterials(Sampler::SharedPtr pSampler)

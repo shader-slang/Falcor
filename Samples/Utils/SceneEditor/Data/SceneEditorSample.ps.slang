@@ -39,14 +39,14 @@ float4 main(VS_OUT vOut) : SV_TARGET
     result.finalValue = 0;
     float4 finalColor = 0;
 
-    for (uint l = 0; l < gLightsCount; l++)
+    for (uint l = 0; l < gLightEnv.lightCount; l++)
     {
-        evalMaterial(shAttr, gLights[l], result, l == 0);
+        evalMaterial(shAttr, gLightEnv.lights[l], result, l == 0);
     }
 
     finalColor = float4(result.finalValue, 1.f);
 
     // add ambient
-    finalColor.rgb += gAmbientLighting * getDiffuseColor(shAttr).rgb;
+    finalColor.rgb += gLightEnv.ambientLighting * getDiffuseColor(shAttr).rgb;
     return finalColor;
 }

@@ -51,7 +51,7 @@ float4 main(VS_OUT vOut) : SV_TARGET
     [unroll]
     for (uint l = 0; l < _LIGHT_COUNT; l++)
     {
-        evalMaterial(shAttr, gLights[l], result, l == 0);
+        evalMaterial(shAttr, gLightEnv.lights[l], result, l == 0);
     }
 
     finalColor = float4(result.finalValue + gAmbient * result.diffuseAlbedo, 1.f);

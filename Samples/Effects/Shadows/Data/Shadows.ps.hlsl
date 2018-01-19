@@ -55,7 +55,7 @@ float4 main(ShadowsVSOut pIn) : SV_TARGET0
     for(uint l = 0 ; l < _LIGHT_COUNT ; l++)
     {
         float shadowFactor = calcShadowFactor(gCsmData[l], pIn.shadowsDepthC, shAttr.P, pIn.vsData.posH.xy/pIn.vsData.posH.w);
-        evalMaterial(shAttr, gLights[l], result, l == 0);
+        evalMaterial(shAttr, gLightEnv.lights[l], result, l == 0);
         fragColor.rgb += result.diffuseAlbedo * result.diffuseIllumination * shadowFactor;
         fragColor.rgb += result.specularAlbedo * result.specularIllumination * (0.01f + shadowFactor * 0.99f);
     }

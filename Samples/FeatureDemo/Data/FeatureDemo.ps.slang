@@ -73,7 +73,7 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
             envMapFactor -= 1 - shadowFactor;
         }
 #endif
-        evalMaterial(shAttr, gLights[l], shadowFactor, result, l == 0);
+        evalMaterial(shAttr, gLightEnv.lights[l], shadowFactor, result, l == 0);
     }
 
     finalColor = float4(result.finalValue, 1.f);
@@ -97,7 +97,7 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
 #endif
 
     // add ambient
-    finalColor.rgb += gAmbientLighting * shAttr.preparedMat.getAlbedo().rgb;
+    finalColor.rgb += gLightEnv.ambientLighting * shAttr.preparedMat.getAlbedo().rgb;
 
     psOut.color = finalColor;
     psOut.normal = float4(vOut.vsData.normalW * 0.5f + 0.5f, 1.0f);

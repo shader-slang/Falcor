@@ -40,9 +40,9 @@ void main()
 
     ShadingOutput result;
 
-    for (uint l = 0; l < gLightsCount; l++)
+    for (uint l = 0; l < gLightEnv.lightCount; l++)
     {
-        evalMaterial(shAttr, gLights[l], result, l == 0);
+        evalMaterial(shAttr, gLightEnv.lights[l], result, l == 0);
     }
 
     fragColor = vec4(result.finalValue, 1.f);

@@ -35,12 +35,17 @@
 #define _FALCOR_SHADER_COMMON_H_
 __import Shading;
 
+// TODO: put this somewhere more reasonable
+struct LightEnv
+{
+    float3 ambientLighting;
+    uint32_t lightCount;
+    LightData lights[MAX_LIGHT_SOURCES];
+};
+
 cbuffer InternalPerFrameCB : register(b10)
 {
     CameraData gCam;
-    float3 gAmbientLighting;
-    uint32_t gLightsCount;
-    LightData gLights[MAX_LIGHT_SOURCES];
 };
 
 cbuffer InternalPerMeshCB

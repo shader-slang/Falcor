@@ -106,6 +106,7 @@ namespace Falcor
             const Camera* pCamera = nullptr;
             const Model* pModel = nullptr;
             const Material* pMaterial = nullptr;
+            LightEnv* pLightEnv = nullptr;
 
             uint32_t drawID; // Zero-based mesh instance draw order/ID. Resets at the beginning of renderScene, and increments per mesh instance drawn.
         };
@@ -121,9 +122,6 @@ namespace Falcor
         static size_t sBonesOffset;
         static size_t sBonesInvTransposeOffset;
         static size_t sCameraDataOffset;
-        static size_t sLightCountOffset;
-        static size_t sLightArrayOffset;
-        static size_t sAmbientLightOffset;
         static size_t sWorldMatArraySize;
         static size_t sWorldMatOffset;
         static size_t sPrevWorldMatOffset;

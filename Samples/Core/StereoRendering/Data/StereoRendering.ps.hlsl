@@ -36,9 +36,9 @@ float4 main(VS_OUT vOut) : SV_TARGET
 
     ShadingOutput result;
 
-    for (uint l = 0; l < gLightsCount; l++)
+    for (uint l = 0; l < gLightEnv.lightCount; l++)
     {
-        evalMaterial(shAttr, gLights[l], result, l == 0);
+        evalMaterial(shAttr, gLightEnv.lights[l], result, l == 0);
     }
 
     return float4(result.finalValue, 1.f);
