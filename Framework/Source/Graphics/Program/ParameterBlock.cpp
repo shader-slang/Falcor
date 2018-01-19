@@ -652,7 +652,6 @@ namespace Falcor
         {
             if (mRootSets[s].dirty == false) continue;
             const auto& pDescSet = mRootSets[s].pSet;
-            mRootSets[s].dirty = false;
             gEventCounter.numParamBlockUpdates++;
             const auto& set = mAssignedResources[s];
             for (uint32_t r = 0 ; r < set.size() ; r++)

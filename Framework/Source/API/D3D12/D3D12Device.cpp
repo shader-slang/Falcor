@@ -255,6 +255,7 @@ namespace Falcor
         mGpuTimestampFrequency = 1000.0 / (double)freq;
 
         mpRenderContext = RenderContext::create(mCmdQueues[(uint32_t)LowLevelContextData::CommandQueueType::Direct][0]);
+        mApiHandle->SetStablePowerState(TRUE);
         return createSwapChain(desc.colorFormat);
     }
 
