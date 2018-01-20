@@ -27,6 +27,7 @@
 ***************************************************************************/
 #include "HostDeviceData.h"
 __import ShaderCommon;
+import Lights;
 ParameterBlock<MaterialData> materialBlock;
 ParameterBlock<LightEnv> lightEnvBlock;
 

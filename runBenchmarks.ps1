@@ -1,11 +1,11 @@
 $rootPath = @("D:\git_repo\faclor-slang\falcor", "D:\git_repo\falcor-preslang\falcor")
 $mediaPath = $rootPath[0] + "\Media\Scenes\"
 
-rem $scenes = @("bumpyplane.fscene", "Bistro\Bistro_Interior.fscene", "Bistro\Bistro_Exterior.fscene", "SunTemple\SunTemple.fscene")
-rem $sceneNames = @("BumpyPlane", "Bistro_Int", "Bistro_Ext", "SunTemple")
+$scenes = @("bumpyplane.fscene", "Bistro\Bistro_Interior.fscene", "Bistro\Bistro_Exterior.fscene", "SunTemple\SunTemple.fscene")
+$sceneNames = @("BumpyPlane", "Bistro_Int", "Bistro_Ext", "SunTemple")
 
-$scenes = @("Bistro\Bistro_Exterior.fscene")
-$sceneNames = @("Bistro_Ext")
+#$scenes = @("Bistro\Bistro_Exterior.fscene")
+#$sceneNames = @("Bistro_Ext")
 
 "" > benchmarkResult.txt
 For ($i = 0; $i -lt $scenes.Length; $i++) {

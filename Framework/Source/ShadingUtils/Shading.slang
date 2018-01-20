@@ -35,7 +35,6 @@
 
 __import Helpers;
 __import Interfaces;
-
 /*******************************************************************
 Documentation
 *******************************************************************/
@@ -559,7 +558,7 @@ void _fn evalDefaultMaterial(
         }
     }
 #endif
-
+    evalQuadLight(shAttr, lAttr, passResult);
     /* Accumulate the results of the pass */
     result.finalValue += passResult.value;
     result.effectiveRoughness += passResult.effectiveRoughness / max(1e-3f, luminance(passResult.value));
@@ -569,6 +568,20 @@ void _fn evalDefaultMaterial(
     result.specularAlbedo = passResult.specularAlbedo;
 }
 
+void evalQuadLight(ShadingAttribsImpl<PreparedMaterialData> shAttr, LightAttribs lAttr, inout PassOutput passResult)
+{
+    float3 diff, spec;
+    evalAreaLight(shAttr.geom.N, shAttr.geom.E, shAttr.geom.P, 
+        shAttr.preparedMat.getRoughness(), 
+        lAttr.lightIntensity, 
+        lAttr.points, false,
+        diff,
+        spec);
+    passResult.diffuseIllumination = diff;
+    passResult.specularIllumination = spec;
+}
+
+
 void _fn evalMaterial<TBRDF : IBRDF>(
     ShadingAttribsImpl<TBRDF> shAttr,
     LightData light,
@@ -577,8 +590,7 @@ void _fn evalMaterial<TBRDF : IBRDF>(
     bool initializeShadingOut DEFAULTS(false))
 {
     /* Prepare lighting attributes */
-    LightAttribs LAttr;
-    prepareLightAttribs(light, shAttr.geom, shadowFactor, LAttr);
+    LightAttribs LAttr = prepareLightAttribs(light, shAttr.geom, shadowFactor);
 
     /* Evaluate material with lighting attributes */
     evalMaterial(shAttr, LAttr, result, initializeShadingOut);

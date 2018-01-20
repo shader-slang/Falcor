@@ -124,7 +124,7 @@ namespace Falcor
                     mpScene->getLight(i)->setIntoConstantBuffer(pCB, i * Light::getShaderStructSize() + sLightArrayOffset);
                 }
             }
-            if (sLightCountOffset != ConstantBuffer::kInvalidOffset)
+            if (sLightCountOffset != ConstantBuffer::kInvalidOff
             {
                 pCB->setVariable(sLightCountOffset, mpScene->getLightCount());
             }
@@ -136,6 +136,7 @@ namespace Falcor
         }
 
         currentData.pVars->setParameterBlock("gLightEnv", currentData.pLightEnv->getParameterBlock());
+        currentData.pLightEnv->setIntoProgramVars(currentData.pVars);
     }
 
     bool SceneRenderer::setPerModelData(const CurrentWorkingData& currentData)

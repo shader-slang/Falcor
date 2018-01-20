@@ -39,7 +39,7 @@
 // SLANG-INTEGRATION
 #include "Graphics/Program/ProgramVars.h"
 #include "Graphics/Program/GraphicsProgram.h"
-
+#include "TextureHelper.h"
 
 namespace Falcor
 {
@@ -249,6 +249,84 @@ namespace Falcor
     {
         logError("DirectionalLight::move() is not used and thus not implemented for now.");
     }
+
+
+    QuadLight::QuadLight() : mDistance(-1.0f)
+    {
+        mData.type = LightDirectional;
+    }
+
+    QuadLight::SharedPtr QuadLight::create()
+    {
+        QuadLight* pLight = new QuadLight();
+        return SharedPtr(pLight);
+    }
+
+    QuadLight::~QuadLight() = default;
+
+    void QuadLight::worldParamsChanged()
+    {
+        mData.worldDir = normalize(mData.worldDir);
+        upDir = normalize(upDir);
+        float3 right = normalize(cross(upDir, mData.worldDir));
+        mData.areaLightPoints[0] = float4(mData.worldPos - right * width * 0.5f - upDir * height * 0.5f, 1.0f);
+        mData.areaLightPoints[1] = float4(mData.worldPos + right * width * 0.5f - upDir * height * 0.5f, 1.0f);
+        mData.areaLightPoints[2] = float4(mData.worldPos + right * width * 0.5f + upDir * height * 0.5f, 1.0f);
+        mData.areaLightPoints[3] = float4(mData.worldPos - right * width * 0.5f + upDir * height * 0.5f, 1.0f);
+    }
+
+    void QuadLight::renderUI(Gui* pGui, const char* group)
+    {
+        if (!group || pGui->beginGroup(group))
+        {
+            if (pGui->addFloatVar("Width", width))
+            {
+                worldParamsChanged();
+            }
+            if (pGui->addFloatVar("Height", height))
+            {
+                worldParamsChanged();
+            }
+            if (pGui->addFloat3Var("Direction", mData.worldDir))
+            {
+                worldParamsChanged();
+            }
+            if (pGui->addFloat3Var("Up", upDir))
+            {
+                worldParamsChanged();
+            }
+            if (pGui->addFloat3Var("Position", mData.worldPos, -10000.0, 10000.0f))
+            {
+                worldParamsChanged();
+            }
+            Light::renderUI(pGui);
+            if (group)
+            {
+                pGui->endGroup();
+            }
+        }
+    }
+
+    void QuadLight::prepareGPUData()
+    {
+    }
+
+    void QuadLight::unloadGPUData()
+    {
+    }
+
+    float QuadLight::getPower()
+    {
+        return luminance(mData.intensity) * width*height;
+    }
+
+    void QuadLight::move(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up)
+    {
+        mData.worldPos = position;
+        mData.worldDir = normalize(target - position);
+        worldParamsChanged();
+    }
+
 
     PointLight::SharedPtr PointLight::create()
     {
@@ -593,6 +671,12 @@ namespace Falcor
 
     LightEnv::LightEnv()
     {
+        texLtcMag = createTextureFromFile("Framework/Textures/ltc_amp.dds", false, false);
+        texLtcMat = createTextureFromFile("Framework/Textures/ltc_mat.dds", false, false);
+        Sampler::Desc desc;
+        desc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
+        desc.setLodParams(0, 0, 0.0f);
+        linearSampler = Sampler::create(desc);
     }
 
     void LightEnv::merge(LightEnv const* lightEnv)
@@ -704,10 +788,18 @@ namespace Falcor
             {
                 pCB->setVariable(sAmbientLightOffset, ambientIntensity);
             }
-
+            
             // Now fill in that parameter block, I guess...
         }
         return mpParamBlock;
+    }
+
+    void LightEnv::setIntoProgramVars(ProgramVars * vars)
+    {
+        auto block = vars->getDefaultBlock();
+        block->setTexture("g_ltc_mat", texLtcMat);
+        block->setTexture("g_ltc_mag", texLtcMag);
+        block->setSampler("g_light_texSampler", linearSampler);
     }
 
     VersionID LightEnv::getVersionID() const
