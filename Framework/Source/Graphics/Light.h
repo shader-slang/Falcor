@@ -146,6 +146,8 @@ namespace Falcor
         DirectionalLight();
         ~DirectionalLight();
 
+        virtual const char * getShaderTypeName() override { return "DirectionalLight"; };
+
         /** Render UI elements for this light.
         \param[in] pGui The GUI to create the elements with
         \param[in] group Optional. If specified, creates a UI group to display elements within
@@ -268,6 +270,8 @@ namespace Falcor
 
         PointLight();
         ~PointLight();
+
+        virtual const char * getShaderTypeName() override { return "PointLight"; };
 
         /** Render UI elements for this light.
             \param[in] pGui The GUI to create the elements with

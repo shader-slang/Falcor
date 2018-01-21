@@ -122,6 +122,68 @@ struct InfinitessimalLight : ILight
     }
 };
 
+struct PointLight : ILight
+{
+    LightData light;
+    void evalLighting<TBxDF:IBRDF>(ShadingAttribsImpl<TBxDF> shAttr, float shadowFactor, inout ShadingOutput result)
+    {
+        LightAttribs LightAttr;
+        /* Evaluate direction to the light */
+        LightAttr.P = getLightPos(light, shAttr.geom.P);
+        LightAttr.pdf = 0;
+        LightAttr.N = 0;
+        LightAttr.shadowFactor = light.isShadowed ? shadowFactor : 1.0;
+        float3 PosToLight = LightAttr.P - shAttr.geom.P;
+        if(dot(PosToLight, PosToLight) > 1e-3f)
+        {
+            LightAttr.L = normalize(PosToLight);
+        }
+        else
+        {
+            LightAttr.L = 0;
+        }
+        LightAttr.lightIntensity = light.intensity;
+        /* Evaluate various attenuation factors: cosine, 1/r^2, etc. */
+        float Atten = 1.f;
+
+        float cosTheta = -dot(LightAttr.L, light.worldDir);	// cos of angle of light orientation with outgoing direction
+
+        // Spot light cone angle
+        if(cosTheta < light.cosOpeningAngle)
+            Atten = 0.f;
+        if(light.penumbraAngle > 0.f)	// Compute cone attenuation of a spot light
+        {
+            float deltaAngle = light.openingAngle - acos(cosTheta);
+            Atten *= clamp((deltaAngle - light.penumbraAngle) / light.penumbraAngle, 0.f, 1.f);
+        }
+
+        // Quadratic attenuation
+        Atten /= max(1e-3f, dot(PosToLight, PosToLight));
+        LightAttr.lightIntensity *= Atten;
+
+        /* Evaluate material with lighting attributes */
+        shAttr.preparedMat.eval(shAttr.geom, LightAttr, result);
+    }
+};
+
+struct DirectionalLight : ILight
+{
+    LightData light;
+    void evalLighting<TBxDF:IBRDF>(ShadingAttribsImpl<TBxDF> shAttr, float shadowFactor, inout ShadingOutput result)
+    {
+        LightAttribs LightAttr;
+        /* Evaluate direction to the light */
+        LightAttr.P = getLightPos(light, shAttr.geom.P);
+        LightAttr.pdf = 0;
+        LightAttr.N = 0;
+        LightAttr.shadowFactor = light.isShadowed ? shadowFactor : 1.0;
+        LightAttr.lightIntensity = light.intensity;
+        LightAttr.L = -light.worldDir;
+        /* Evaluate material with lighting attributes */
+        shAttr.preparedMat.eval(shAttr.geom, LightAttr, result);
+    }
+};
+
 struct AmbientLight : ILight
 {
     float3 ambientLight;
