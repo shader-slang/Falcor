@@ -283,6 +283,136 @@ struct Material : IMaterial
     }
 };
 
+struct StandardPreparedMaterialData<let HasDiffuse:int, let HasSpecular:int, let HasDieletric:int, let HasEmisive:int> : IBRDF
+{
+    MaterialDesc    desc;
+    MaterialValues  values;
+    
+    // SLANG-INTEGRATION: move aoFactor from ShadingAttribs to PreparedMaterialData
+    float aoFactor;
+
+    // SLANG-INTEGRATION: PreparedMaterialData now implements IBRDF interface
+
+    void eval(ShadingGeometry geom, LightAttribs lAttr, inout ShadingOutput result)
+    {
+        // call previous evalMaterial (now evalDefaultMaterial) function
+        PreparedMaterialData pdata;
+        pdata.desc = desc;
+        pdata.values = values;
+        pdata.aoFactor = aoFactor; 
+        ShadingAttribsImpl<PreparedMaterialData> attr = makeShadingAttribs(geom, pdata);
+        
+        PassOutput passResult;
+        passResult.value = 0;
+        passResult.diffuseAlbedo = 0;
+        passResult.diffuseIllumination = 0;
+        passResult.specularAlbedo = 0;
+        passResult.specularIllumination = 0;
+        passResult.roughness = 0;
+        passResult.effectiveRoughness = 0;
+
+        int iLayer = 0;
+        if (HasDiffuse)
+        {
+            MaterialLayerValues lvalues = values.layers[iLayer];
+            float4 value = evalDiffuseLayer(lvalues, lAttr.lightIntensity, lAttr.L, attr.geom.N, passResult) * lAttr.shadowFactor;
+            float3 oldValue = passResult.value;
+            passResult.value = blendLayer(lvalues.albedo, value, BlendAdd, passResult.value);
+            float delta = max(1e-3f, luminance(passResult.value - oldValue));
+            passResult.effectiveRoughness += passResult.roughness * delta;
+            iLayer++;
+        }
+        if (HasSpecular)
+        {
+            MaterialLayerValues lvalues = values.layers[iLayer];
+            MaterialLayerDesc ldesc = desc.layers[iLayer];
+            ldesc.ndf = NDFGGX;
+            float4 value = evalSpecularLayer(ldesc, lvalues, attr.geom, lAttr, passResult) * lAttr.shadowFactor;
+            float3 oldValue = passResult.value;
+            passResult.value = blendLayer(lvalues.albedo, value, BlendAdd, passResult.value);
+            float delta = max(1e-3f, luminance(passResult.value - oldValue));
+            passResult.effectiveRoughness += passResult.roughness * delta;
+            iLayer++;
+        }
+        if (HasDieletric)
+        {
+            MaterialLayerValues lvalues = values.layers[iLayer];
+            MaterialLayerDesc ldesc = desc.layers[iLayer];
+            ldesc.ndf = NDFGGX;
+            float4 value = evalSpecularLayer(ldesc, lvalues, attr.geom, lAttr, passResult) * lAttr.shadowFactor;
+            float3 oldValue = passResult.value;
+            passResult.value = blendLayer(lvalues.albedo, value, BlendFresnel, passResult.value);
+            float delta = max(1e-3f, luminance(passResult.value - oldValue));
+            passResult.effectiveRoughness += passResult.roughness * delta;
+            iLayer++;
+        }
+        if (HasEmisive)
+        {
+            MaterialLayerValues lvalues = values.layers[iLayer];
+            float4 value = evalEmissiveLayer(lvalues, passResult);
+            float3 oldValue = passResult.value;
+            passResult.value = blendLayer(lvalues.albedo, value, BlendAdd, passResult.value);
+            float delta = max(1e-3f, luminance(passResult.value - oldValue));
+            passResult.effectiveRoughness += passResult.roughness * delta;
+        }
+
+        /* Accumulate the results of the pass */
+        result.finalValue += passResult.value;
+        result.effectiveRoughness += passResult.effectiveRoughness / max(1e-3f, luminance(passResult.value));
+        result.diffuseIllumination += passResult.diffuseIllumination;
+        result.specularIllumination += passResult.specularIllumination;
+        result.diffuseAlbedo = passResult.diffuseAlbedo;
+        result.specularAlbedo = passResult.specularAlbedo;
+    }
+    float getRoughness()
+    {
+        return values.layers[HasDiffuse].albedo.a;
+    }
+    
+    float4 getAlbedo()
+    {
+        return values.layers[0].albedo;
+    }
+};
+
+struct StandardMaterial<let HasDiffuse:int, let HasSpecular:int, let HasDieletric:int, let HasEmisive:int> : IMaterial
+{
+    typedef StandardPreparedMaterialData<HasDiffuse, HasSpecular, HasDieletric, HasEmisive> EvaluatedMaterial;
+    
+    MaterialData materialData;
+    void prepareForDepthPass(ShadingGeometry geom)
+    {
+         applyAlphaTest(materialData, geom, geom.P);
+    }
+    ShadingAttribsImpl<StandardPreparedMaterialData<HasDiffuse, HasSpecular, HasDieletric, HasEmisive> > prepare(ShadingGeometry geom)
+    {
+        ShadingAttribsImpl<StandardPreparedMaterialData<HasDiffuse, HasSpecular, HasDieletric, HasEmisive> > shAttr;
+        shAttr.geom = geom;
+        
+        shAttr.preparedMat.values = materialData.values;
+        shAttr.preparedMat.desc = materialData.desc;
+
+        /* Evaluate alpha test material modifier */
+        applyAlphaTest(materialData, shAttr.geom, shAttr.geom.P);
+        shAttr.preparedMat.aoFactor = 1;
+
+        bool done = false;
+
+        int layerCount = HasDiffuse + HasSpecular + HasDieletric + HasEmisive;
+        for (int iLayer = 0; iLayer < layerCount; iLayer++)
+        {
+            shAttr.preparedMat.values.layers[iLayer].albedo =
+                    evalWithColor(materialData.desc.layers[iLayer].hasTexture, 
+                    materialData.textures.layers[iLayer], materialData.samplerState, 
+                    materialData.values.layers[iLayer].albedo, shAttr.geom);
+        }
+
+        /* Perturb shading normal is needed */
+        perturbNormal(materialData, shAttr.geom);
+        return shAttr;
+    }
+};
+
 /**
 Prepares all light-independent attributes needed to perform shading at a hit point.
 This includes fetching all textures and computing final shading attributes, like albedo and roughness.

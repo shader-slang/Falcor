@@ -36,7 +36,7 @@
 #include "Graphics/Program/ProgramVars.h"
 #include "Graphics/Program/GraphicsProgram.h"
 #include <cstring>
-
+#include <sstream>
 namespace Falcor
 {
     static const char* kMaterialVarName = "materialBlock";
@@ -573,5 +573,43 @@ namespace Falcor
             assert(spBlockReflection);
         }
         mpParamBlock = ParameterBlock::create(spBlockReflection, true);
+    }
+    StandardMaterial::SharedPtr StandardMaterial::create(const std::string & name)
+    {
+        auto mat = new StandardMaterial(name);
+        return StandardMaterial::SharedPtr(mat);
+    }
+    StandardMaterial::~StandardMaterial()
+    {
+    }
+    void StandardMaterial::createParameterBlock()
+    {
+        Material::createParameterBlock();
+    }
+    void StandardMaterial::finalize() const
+    {
+        if (mDescDirty)
+        {
+            bool hasDiffuse = false, hasSpecular = false, hasDielectric = false, hasEmisive = false;
+            for (auto i = 0; i < MatMaxLayers; ++i)
+            {
+                auto t = mData.desc.layers[i].type;
+                if (t == MatLambert)
+                    hasDiffuse = true;
+                else if (t == MatConductor)
+                    hasSpecular = true;
+                else if (t == MatDielectric)
+                    hasDielectric = true;
+                else if (t == MatEmissive)
+                    hasEmisive = true;
+            }
+            std::stringstream strStream;
+            strStream << "StandardMaterial<" << (hasDiffuse ? "1" : "0") << ", "
+                << (hasSpecular ? "1" : "0") << ", "
+                << (hasDielectric ? "1" : "0") << ", "
+                << (hasEmisive ? "1" : "0") << ">";
+            mpParamBlock->typeName = strStream.str();
+        }
+        Material::finalize();
     }
 }

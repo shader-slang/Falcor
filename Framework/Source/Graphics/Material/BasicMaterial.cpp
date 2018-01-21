@@ -39,7 +39,7 @@ namespace Falcor
 
     Material::SharedPtr BasicMaterial::convertToMaterial()
     {
-        Material::SharedPtr pMaterial = Material::create("");
+        Material::SharedPtr pMaterial = StandardMaterial::create("");
         std::string name = "BasicMaterial" + std::to_string(pMaterial->getId());
         pMaterial->setName(name);
 

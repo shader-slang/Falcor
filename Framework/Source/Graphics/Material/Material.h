@@ -320,15 +320,16 @@ namespace Falcor
         /** Get the ParameterBlock object for the material. Each material is created with a parameter-block. Using it is more efficient than assigning data to a custom constant-buffer.
         */
         ParameterBlock::SharedConstPtr getParameterBlock() const;
-    private:
-        void finalize() const;
+    protected:
+        Material(const std::string& name);
+    protected:
+        virtual void finalize() const;
         void normalize() const;
         void updateTextureCount() const;
 
         static const uint32_t kTexCount = MatMaxLayers + 4;
         static_assert(sizeof(MaterialTextures) == (sizeof(Texture::SharedPtr) * kTexCount), "Wrong number of textures in Material::mTextures");
 
-        Material(const std::string& name);
         mutable MaterialData mData; ///< Material data shared between host and device
         bool mDoubleSided = false;  ///< Used for culling
         std::string mName;
@@ -351,8 +352,23 @@ namespace Falcor
         static uint32_t sMaterialCounter;
         static std::vector<DescId> sDescIdentifier; // vector is slower then map, but map requires 'less' operator. This vector is only being used when the material is dirty, which shouldn't happen often
 
-        ParameterBlock::SharedPtr mpParamBlock;
         static ParameterBlockReflection::SharedConstPtr spBlockReflection;
-        void createParameterBlock();
+    protected:
+        ParameterBlock::SharedPtr mpParamBlock;
+        virtual void createParameterBlock();
+    };
+
+    class StandardMaterial : public Material
+    {
+    public:
+        using SharedPtr = std::shared_ptr<StandardMaterial>;
+        using SharedConstPtr = std::shared_ptr<const StandardMaterial>;
+    public:
+        StandardMaterial(const std::string& name) : Material(name) {}
+        static SharedPtr create(const std::string& name);
+        ~StandardMaterial();
+    protected:
+        virtual void createParameterBlock() override;
+        virtual void finalize() const override;
     };
 }
