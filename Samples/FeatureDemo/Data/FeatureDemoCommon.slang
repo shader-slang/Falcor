@@ -28,6 +28,7 @@
 __exported import ShaderCommon;
 __exported import DefaultVS;
 __exported import Effects.CascadedShadowMap;
+__exported import Lights;
 #include "VertexAttrib.h"
 
 layout(binding = 0) cbuffer PerFrameCB : register(b0)

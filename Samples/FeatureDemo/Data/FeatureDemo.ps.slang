@@ -61,21 +61,14 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
     opacity = getDiffuseColor(shAttr).a;
 #endif
 
-    //[unroll]
-    for (uint l = 0; l < _LIGHT_COUNT; l++)
-    {
-        float shadowFactor = 1;
+    float shadowFactor = 1;
 #ifdef _ENABLE_SHADOWS
-        if (l == 0)
-        {
-            shadowFactor = calcShadowFactor(gCsmData, vOut.shadowsDepthC, shAttr.geom.P, vOut.vsData.posH.xy / vOut.vsData.posH.w);
-            shadowFactor *= opacity;
-            envMapFactor -= 1 - shadowFactor;
-        }
+    shadowFactor = calcShadowFactor(gCsmData, vOut.shadowsDepthC, shAttr.geom.P, vOut.vsData.posH.xy / vOut.vsData.posH.w);
+    shadowFactor *= opacity;
+    envMapFactor -= 1 - shadowFactor;
 #endif
-        evalMaterial(shAttr, gLightEnv.lights[l], shadowFactor, result, l == 0);
-    }
 
+    evalMaterial<TMaterial.EvaluatedMaterial, TLightEnv>(shAttr, gLightEnv, shadowFactor, result, true);
     finalColor = float4(result.finalValue, 1.f);
 #ifdef _ENABLE_TRANSPARENCY
     finalColor.a = opacity * gOpacityScale;
@@ -95,9 +88,6 @@ PsOut main(MainVsOut vOut, float4 pixelCrd : SV_POSITION)
     envMapFactor = saturate(envMapFactor) * gEnvMapFactorScale;
     finalColor.rgb += (result.specularAlbedo) * envMapVal * envMapFactor;
 #endif
-
-    // add ambient
-    finalColor.rgb += gLightEnv.ambientLighting * shAttr.preparedMat.getAlbedo().rgb;
 
     psOut.color = finalColor;
     psOut.normal = float4(vOut.vsData.normalW * 0.5f + 0.5f, 1.0f);

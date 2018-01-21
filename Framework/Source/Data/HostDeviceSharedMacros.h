@@ -89,7 +89,6 @@
 #define LightQuad            3    ///< Quad area light source
 
 //#define LightVolume        3    ///< Volumetric light source
-
 #define MAX_LIGHT_SOURCES 16
 
 /*******************************************************************

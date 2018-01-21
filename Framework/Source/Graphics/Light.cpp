@@ -40,6 +40,7 @@
 #include "Graphics/Program/ProgramVars.h"
 #include "Graphics/Program/GraphicsProgram.h"
 #include "TextureHelper.h"
+#include <sstream>
 
 namespace Falcor
 {
@@ -732,19 +733,49 @@ namespace Falcor
 
     ParameterBlock::SharedConstPtr LightEnv::getParameterBlock() const
     {
+        auto env = const_cast<LightEnv*>(this);
         auto versionID = getVersionID();
         if( versionID > mParamBlockVersionID )
         {
             mParamBlockVersionID = versionID;
-
+            for (auto & light : env->mpLights)
+                light->setShadowed(false);
+            if (env->mpLights.size() > 0)
+                env->mpLights[0]->setShadowed(true);
             // SLANG-INTEGRATION
             if (spBlockReflection == nullptr)
             {
+                env->lightTypes.clear();
+                for (auto light : mpLights)
+                {
+                    auto lightType = light->getType();
+                    auto findRs = env->lightTypes.find(lightType);
+                    if (findRs == env->lightTypes.end())
+                    {
+                        LightTypeInfo newInfo;
+                        newInfo.typeName = light->getShaderTypeName();
+                        env->lightTypes[lightType] = newInfo;
+                        findRs = env->lightTypes.find(lightType);
+                    }
+                    findRs->second.lights.push_back(light);
+                }
+                std::stringstream varNameSb, strStream;
+                for (auto & lt : env->lightTypes)
+                {
+                    strStream << "LightPair<LightArray<" << lt.second.typeName << ", " << lt.second.lights.size()
+                        <<">, ";
+                    lt.second.variableName = varNameSb.str() + "light1";
+                    varNameSb << "light2.";
+                }
+                strStream << "AmbientLight";
+                for (size_t i = 0u; i < env->lightTypes.size(); i++)
+                    strStream << "> ";
                 GraphicsProgram::SharedPtr pProgram = GraphicsProgram::createFromFile("", "Framework/Shaders/MaterialBlock.slang");
                 ProgramReflection::SharedConstPtr pReflection = pProgram->getActiveVersion()->getReflector();
                 auto slangReq = pProgram->getActiveVersion()->slangRequest;
                 auto reflection = spGetReflection(slangReq);
-                auto materialType = spReflection_FindTypeByName(reflection, "LightEnv");
+              
+                auto materialType = spReflection_FindTypeByName(reflection, strStream.str().c_str());
                 auto layout = spReflection_GetTypeLayout(reflection, materialType, SLANG_LAYOUT_RULES_DEFAULT);
                 auto blockType = reflectType((slang::TypeLayoutReflection*)layout);
                 auto blockReflection = ParameterBlockReflection::create("");
@@ -752,16 +783,16 @@ namespace Falcor
                 blockReflection->finalize();
                 spBlockReflection = blockReflection;
                 assert(spBlockReflection);
-
-                const auto& pCountOffset = blockType->findMember("lightCount");
-                sLightCountOffset = pCountOffset ? pCountOffset->getOffset() : ConstantBuffer::kInvalidOffset;
-                const auto& pLightOffset = blockType->findMember("lights");
-                sLightArrayOffset = pLightOffset ? pLightOffset->getOffset() : ConstantBuffer::kInvalidOffset;
-                const auto& pAmbientOffset = blockType->findMember("ambientLighting");
+                for (auto & lt : env->lightTypes)
+                {
+                    lt.second.cbOffset = blockType->findMember(lt.second.variableName)->getOffset();
+                }
+                const auto& pAmbientOffset = blockType->findMember(varNameSb.str() + "ambientLight");
                 sAmbientLightOffset = pAmbientOffset ? pAmbientOffset->getOffset() : ConstantBuffer::kInvalidOffset;
+                env->shaderTypeName = strStream.str();
             }
             mpParamBlock = ParameterBlock::create(spBlockReflection, true);
-
+            mpParamBlock->typeName = shaderTypeName;
             // Note: the following logic used to be in the `SceneRenderer`,
             // and so some stuff doesn't translate directly (e.g., we don't
             // currently have a representation of ambient lights in the
@@ -770,20 +801,16 @@ namespace Falcor
             glm::vec3 ambientIntensity = glm::vec3(0.0f);
 
             ConstantBuffer* pCB = mpParamBlock->getConstantBuffer(mpParamBlock->getReflection()->getName()).get();
-
-            // Set lights
-            if (sLightArrayOffset != ConstantBuffer::kInvalidOffset)
+            for (auto & lt : env->lightTypes)
             {
-                assert(getLightCount() <= MAX_LIGHT_SOURCES);  // Max array size in the shader
-                for (uint_t i = 0; i < getLightCount(); i++)
+                uint32_t i = 0;
+                for (auto l : lt.second.lights)
                 {
-                    getLight(i)->setIntoConstantBuffer(pCB, i * Light::getShaderStructSize() + sLightArrayOffset);
+                    l->setIntoConstantBuffer(pCB, i * Light::getShaderStructSize() + lt.second.cbOffset);
+                    i++;
                 }
             }
-            if (sLightCountOffset != ConstantBuffer::kInvalidOffset)
-            {
-                pCB->setVariable(sLightCountOffset, getLightCount());
-            }
+            // Set lights
             if (sAmbientLightOffset != ConstantBuffer::kInvalidOffset)
             {
                 pCB->setVariable(sAmbientLightOffset, ambientIntensity);

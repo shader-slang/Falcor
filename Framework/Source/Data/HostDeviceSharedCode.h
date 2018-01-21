@@ -187,7 +187,7 @@ struct LightData
 	float3            tangent            DEFAULTS(float3());          ///< Tangent vector of the geometry mesh
 	uint32_t        numIndices         DEFAULTS(0);               ///< Number of triangle indices in a polygonal area light
 	float3            bitangent          DEFAULTS(float3());          ///< BiTangent vector of the geometry mesh
-	float           pad;
+	int           isShadowed            DEFAULTS(0);
     float4x4            transMat           DEFAULTS(float4x4());          ///< Transformation matrix of the model instance for area lights
     float4          areaLightPoints[4];  // world space vertices for quad light
     // For area light

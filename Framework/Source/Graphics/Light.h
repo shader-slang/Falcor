@@ -35,6 +35,7 @@
 #include "Utils/Gui.h"
 #include "Graphics/Model/Model.h"
 #include "Graphics/Paths/MovableObject.h"
+#include <map>
 
 namespace Falcor
 {
@@ -89,6 +90,8 @@ namespace Falcor
         */
         uint32_t getType() const { return mData.type; }
 
+        virtual const char * getShaderTypeName() { return "InfinitessimalLight"; };
+
         /** Get the light Type
         */
         inline const LightData& getData() const { return mData; }
@@ -100,6 +103,8 @@ namespace Falcor
         /** Get the light's name
         */
         const std::string& getName() const { return mName; }
+
+        void setShadowed(bool s) { mData.isShadowed = s ? 1 : 0; }
 
         /** Gets the size of a single light data struct in bytes
         */
@@ -181,7 +186,7 @@ namespace Falcor
         /** IMovableObject interface
         */
         void move(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up) override;
-
+        
     private:
 
         float mDistance = 1e3f; ///< Scene bounding radius is required to move the light position sufficiently far away
@@ -470,7 +475,15 @@ namespace Falcor
         using SharedConstPtr = std::shared_ptr<const LightEnv>;
 
         static LightEnv::SharedPtr create();
-
+        struct LightTypeInfo
+        {
+            const char* typeName;
+            std::string variableName;
+            size_t cbOffset = 0;
+            std::vector<Light::SharedPtr> lights;
+        };
+        std::string shaderTypeName;
+        std::map<uint32_t, LightTypeInfo> lightTypes;
         Texture::SharedPtr texLtcMag, texLtcMat;
         Sampler::SharedPtr linearSampler;
 

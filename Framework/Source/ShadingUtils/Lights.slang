@@ -310,7 +310,7 @@ inline LightAttribs _fn prepareLightAttribs(LightData Light, ShadingGeometry ShA
     LightAttr.P = getLightPos(Light, ShAttr.P);
     LightAttr.pdf = 0;
     LightAttr.N = 0;
-    LightAttr.shadowFactor = shadowFactor;
+    LightAttr.shadowFactor = Light.isShadowed ? shadowFactor : 1.0;
     [unroll]
     for(uint i = 0 ; i < 4 ; i++)
     {

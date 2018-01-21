@@ -104,6 +104,56 @@ interface IMaterial
     ShadingAttribsImpl<EvaluatedMaterial> prepare(ShadingGeometry geom);
 }
 
+interface ILight
+{
+    void evalLighting<TBRDF:IBRDF>(ShadingAttribsImpl<TBRDF> shAttr, float shadowFactor, inout ShadingOutput result);
+}
+
+struct InfinitessimalLight : ILight
+{
+    LightData light;
+    void evalLighting<TBxDF:IBRDF>(ShadingAttribsImpl<TBxDF> shAttr, float shadowFactor, inout ShadingOutput result)
+    {
+        /* Prepare lighting attributes */
+        LightAttribs LAttr = prepareLightAttribs(light, shAttr.geom, shadowFactor);
+
+        /* Evaluate material with lighting attributes */
+        shAttr.preparedMat.eval(shAttr.geom, LAttr, result);
+    }
+};
+
+struct AmbientLight : ILight
+{
+    float3 ambientLight;
+    void evalLighting<TBxDF:IBRDF>(ShadingAttribsImpl<TBxDF> shAttr, float shadowFactor, inout ShadingOutput result)
+    {
+        result.finalValue += ambientLight * shAttr.preparedMat.getAlbedo().xyz;
+    }
+};
+
+struct LightArray<TLight:ILight, let N:int> : ILight
+{   
+    TLight lights[N];
+    void evalLighting<TBxDF:IBRDF>(ShadingAttribsImpl<TBxDF> shAttr, float shadowFactor, inout ShadingOutput result)
+    {
+        for (int i = 0; i < N; i++)
+        {
+            lights[i].evalLighting(shAttr, shadowFactor, result);
+        }
+    }
+};
+
+struct LightPair<TLight1 : ILight, TLight2 : ILight> : ILight
+{
+    TLight1 light1;
+    TLight2 light2;
+    void evalLighting<TBxDF:IBRDF>(ShadingAttribsImpl<TBxDF> shAttr, float shadowFactor, inout ShadingOutput result)
+    {
+        light1.evalLighting(shAttr, shadowFactor, result);
+        light2.evalLighting(shAttr, shadowFactor, result);
+    }
+};
+
 ShadingOutput initShadingOutput()
 {
     ShadingOutput result;
@@ -516,20 +566,6 @@ void _fn evalDefaultMaterial(
     _ref(ShadingOutput) result,
     bool initializeShadingOut DEFAULTS(false))
 {
-    /* If it's the first pass, initialize all the aggregates to zero */
-    if(initializeShadingOut)
-    {
-        result.diffuseAlbedo = 0;
-        result.diffuseIllumination = 0;
-        result.specularAlbedo = 0;
-        result.specularIllumination = 0;
-        result.finalValue = 0;
-        result.effectiveRoughness = 0;
-        result.wi = 0;
-        result.pdf = 0;
-        result.thp = 0;
-    }
-
     /* Go through all layers and perform a layer-by-layer shading and compositing */
     PassOutput passResult;
     passResult.value = 0;
@@ -558,7 +594,6 @@ void _fn evalDefaultMaterial(
         }
     }
 #endif
-    evalQuadLight(shAttr, lAttr, passResult);
     /* Accumulate the results of the pass */
     result.finalValue += passResult.value;
     result.effectiveRoughness += passResult.effectiveRoughness / max(1e-3f, luminance(passResult.value));
@@ -582,26 +617,34 @@ void evalQuadLight(ShadingAttribsImpl<PreparedMaterialData> shAttr, LightAttribs
 }
 
 
-void _fn evalMaterial<TBRDF : IBRDF>(
+void _fn evalMaterial<TBRDF : IBRDF, TLight : ILight>(
     ShadingAttribsImpl<TBRDF> shAttr,
-    LightData light,
+    TLight light,
     float shadowFactor,
     _ref(ShadingOutput) result,
     bool initializeShadingOut DEFAULTS(false))
 {
-    /* Prepare lighting attributes */
-    LightAttribs LAttr = prepareLightAttribs(light, shAttr.geom, shadowFactor);
-
-    /* Evaluate material with lighting attributes */
-    evalMaterial(shAttr, LAttr, result, initializeShadingOut);
+    if(initializeShadingOut)
+    {
+        result.diffuseAlbedo = 0;
+        result.diffuseIllumination = 0;
+        result.specularAlbedo = 0;
+        result.specularIllumination = 0;
+        result.finalValue = 0;
+        result.effectiveRoughness = 0;
+        result.wi = 0;
+        result.pdf = 0;
+        result.thp = 0;
+    }
+    light.evalLighting(shAttr, shadowFactor, result);
 }
 
 /**
 Another overload of material evaluation function, which prepares light attributes internally.
 */
-void _fn evalMaterial<TBRDF : IBRDF>(
+void _fn evalMaterial<TBRDF : IBRDF, TLight : ILight>(
     ShadingAttribsImpl<TBRDF> shAttr,
-    LightData light,
+    TLight light,
     _ref(ShadingOutput) result,
     bool initializeShadingOut DEFAULTS(false))
 {
