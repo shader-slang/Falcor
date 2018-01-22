@@ -199,6 +199,7 @@ void FeatureDemo::loadScene(const std::string& filename, bool showProgressBar)
         pBar = ProgressBar::create("Loading Scene", 100);
     }
 
+//    Scene::SharedPtr pScene = Scene::loadFromFile(filename, Model::LoadFlags::None, Scene::LoadFlags::GenerateAreaLights);
     Scene::SharedPtr pScene = Scene::loadFromFile(filename);
 
     if (pScene != nullptr)

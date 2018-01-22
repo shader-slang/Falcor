@@ -1,0 +1,116 @@
+{
+    "version": 2,
+    "camera_speed": 1.0,
+    "lighting_scale": 1.0,
+    "active_camera": "default",
+    "ambient_intensity": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "models": [
+        {
+            "file": "bumpy/bumpyplane.obj",
+            "name": "bumpyplane",
+            "instances": [
+                {
+                    "name": "",
+                    "translation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scaling": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        -90,
+                        0.0
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "arealight.obj",
+            "name": "arealight",
+            "instances": [
+                {
+                    "name": "arealight0",
+                    "translation": [
+                        0.0,
+                        2.1,
+                        0.0
+                    ],
+                    "scaling": [
+                        0.25,
+                        0.25,
+                        0.25
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                }
+            ]
+        }
+    ],
+  "lights":[
+  {
+  "name":"dir_light0",
+  "type":"dir_light",
+  "intensity":[0.1, 0.1, 0.1],
+  "direction":[0, -1, -1]
+  },
+  {
+  "name":"quad_light0",
+  "type":"quad_light",
+  "light_size":[4, 4],
+  "intensity":[1, 0.9, 0.5],
+  "pos":[0, 2.1, 0],
+  "direction":[0, 0, -1],
+  "light_up":[0, 1, 0]
+  }
+  ],
+    "cameras": [
+        {
+            "name": "default",
+            "pos": [
+                0.06257692724466324,
+                1.9538533687591553,
+                10.396663665771485
+            ],
+            "target": [
+                0.07166308164596558,
+                1.7397770881652833,
+                9.419888496398926
+            ],
+            "up": [
+                0.0027377100195735695,
+                0.9768157601356506,
+                -0.21406018733978272
+            ],
+            "focal_length": 21.0,
+            "depth_range": [
+                0.1065976619720459,
+                106.59766387939453
+            ],
+            "aspect_ratio": 1.7777777910232545
+        }
+    ],
+    "user_defined": {
+        "dirlight_color": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "dirlight_dir": [
+            -0.4402254521846771,
+            -0.17609018087387086,
+            -0.8804509043693543
+        ]
+    }
+}

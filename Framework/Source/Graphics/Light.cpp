@@ -77,6 +77,10 @@ namespace Falcor
         }
     }
 
+    void Light::setResources(ParameterBlock* pBlock, std::string const& varName)
+    {
+        // nothing to do
+    }
 
     void Light::setIntoConstantBuffer(ConstantBuffer* pBuffer, const std::string& varName)
     {
@@ -139,6 +143,7 @@ namespace Falcor
         mUiLightIntensityColor = uiColor;
         mData.intensity = (mUiLightIntensityColor * mUiLightIntensityScale);
         updateAreaLightIntensity(mData);
+        makeDirty();
     }
 
     float Light::getIntensityForUI()
@@ -166,6 +171,7 @@ namespace Falcor
         mUiLightIntensityScale = intensity;
         mData.intensity = (mUiLightIntensityColor * mUiLightIntensityScale);
         updateAreaLightIntensity(mData);
+        makeDirty();
     }
 
     void Light::renderUI(Gui* pGui, const char* group)
@@ -223,6 +229,7 @@ namespace Falcor
     {
         mData.worldDir = normalize(dir);
         mData.worldPos = mCenter - mData.worldDir * mDistance; // Move light's position sufficiently far away
+        makeDirty();
     }
 
     void DirectionalLight::setWorldParams(const glm::vec3& center, float radius)
@@ -230,6 +237,7 @@ namespace Falcor
         mDistance = radius;
         mCenter = center;
         mData.worldPos = mCenter - mData.worldDir * mDistance; // Move light's position sufficiently far away
+        makeDirty();
     }
 
     void DirectionalLight::prepareGPUData()
@@ -254,7 +262,14 @@ namespace Falcor
 
     QuadLight::QuadLight() : mDistance(-1.0f)
     {
-        mData.type = LightDirectional;
+        mData.type = LightQuad;
+
+        texLtcMag = createTextureFromFile("Framework/Textures/ltc_amp.dds", false, false);
+        texLtcMat = createTextureFromFile("Framework/Textures/ltc_mat.dds", false, false);
+        Sampler::Desc desc;
+        desc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
+        desc.setLodParams(0, 0, 0.0f);
+        linearSampler = Sampler::create(desc);
     }
 
     QuadLight::SharedPtr QuadLight::create()
@@ -265,6 +280,13 @@ namespace Falcor
 
     QuadLight::~QuadLight() = default;
 
+    void QuadLight::setResources(ParameterBlock* pBlock, std::string const& varName)
+    {
+        pBlock->setTexture(varName + ".g_ltc_mat", texLtcMat);
+        pBlock->setTexture(varName + ".g_ltc_mag", texLtcMag);
+        pBlock->setSampler(varName + ".g_light_texSampler", linearSampler);
+    }
+
     void QuadLight::worldParamsChanged()
     {
         mData.worldDir = normalize(mData.worldDir);
@@ -274,6 +296,7 @@ namespace Falcor
         mData.areaLightPoints[1] = float4(mData.worldPos + right * width * 0.5f - upDir * height * 0.5f, 1.0f);
         mData.areaLightPoints[2] = float4(mData.worldPos + right * width * 0.5f + upDir * height * 0.5f, 1.0f);
         mData.areaLightPoints[3] = float4(mData.worldPos - right * width * 0.5f + upDir * height * 0.5f, 1.0f);
+        makeDirty();
     }
 
     void QuadLight::renderUI(Gui* pGui, const char* group)
@@ -301,6 +324,10 @@ namespace Falcor
                 worldParamsChanged();
             }
             Light::renderUI(pGui);
+            pGui->addFloat4Var("points[0]", mData.areaLightPoints[0], -10000.0f, 1000.0f);
+            pGui->addFloat4Var("points[1]", mData.areaLightPoints[1], -10000.0f, 1000.0f);
+            pGui->addFloat4Var("points[2]", mData.areaLightPoints[2], -10000.0f, 1000.0f);
+            pGui->addFloat4Var("points[3]", mData.areaLightPoints[3], -10000.0f, 1000.0f);
             if (group)
             {
                 pGui->endGroup();
@@ -672,12 +699,6 @@ namespace Falcor
 
     LightEnv::LightEnv()
     {
-        texLtcMag = createTextureFromFile("Framework/Textures/ltc_amp.dds", false, false);
-        texLtcMat = createTextureFromFile("Framework/Textures/ltc_mat.dds", false, false);
-        Sampler::Desc desc;
-        desc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
-        desc.setLodParams(0, 0, 0.0f);
-        linearSampler = Sampler::create(desc);
     }
 
     void LightEnv::merge(LightEnv const* lightEnv)
@@ -807,6 +828,9 @@ namespace Falcor
                 for (auto l : lt.second.lights)
                 {
                     l->setIntoConstantBuffer(pCB, i * Light::getShaderStructSize() + lt.second.cbOffset);
+
+                    l->setResources(mpParamBlock.get(), lt.second.variableName + ".lights[" + std::to_string(i) + "]");
+
                     i++;
                 }
             }
@@ -824,9 +848,9 @@ namespace Falcor
     void LightEnv::setIntoProgramVars(ProgramVars * vars)
     {
         auto block = vars->getDefaultBlock();
-        block->setTexture("g_ltc_mat", texLtcMat);
-        block->setTexture("g_ltc_mag", texLtcMag);
-        block->setSampler("g_light_texSampler", linearSampler);
+//        block->setTexture("g_ltc_mat", texLtcMat);
+//        block->setTexture("g_ltc_mag", texLtcMag);
+//        block->setSampler("g_light_texSampler", linearSampler);
     }
 
     VersionID LightEnv::getVersionID() const
