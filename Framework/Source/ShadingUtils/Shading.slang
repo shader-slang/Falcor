@@ -222,6 +222,15 @@ extension PreparedMaterialData
     }
 }
 
+__generic<let HasDiffuse:int, let HasSpecular:int, let HasDieletric:int, let HasEmisive:int>
+extension StandardPreparedMaterialData<HasDiffuse,HasSpecular,HasDieletric, HasEmisive>
+{
+    void acceptQuadLight(QuadLight quadLight, LightAttribs LAttr, ShadingGeometry geom, float shadowFactor, inout ShadingOutput result)
+    {
+        evalQuadLight(this, geom, quadLight, LAttr, result);
+    }
+}
+
 #define pi 3.14159265
 #define LUT_SIZE 32.0
 #define LUT_SCALE (LUT_SIZE - 1.0)/LUT_SIZE
@@ -1037,6 +1046,46 @@ void _fn evalDefaultMaterial(
 
 void evalQuadLight(
     PreparedMaterialData    bxdf,
+    ShadingGeometry         geom,
+    QuadLight               quadLight, 
+    LightAttribs            lAttr,
+    inout ShadingOutput     result)
+{
+    PassOutput passResult;
+    passResult.value = 0;
+    passResult.diffuseAlbedo = 0;
+    passResult.diffuseIllumination = 0;
+    passResult.specularAlbedo = 0;
+    passResult.specularIllumination = 0;
+    passResult.roughness = 0;
+    passResult.effectiveRoughness = 0;
+
+    float3 diff, spec;
+    evalAreaLight(geom.N, geom.E, geom.P, 
+        bxdf.getRoughness(), 
+        lAttr.lightIntensity, 
+        lAttr.points, false,
+        quadLight,
+        diff,
+        spec);
+
+    diff *= bxdf.getAlbedo().xyz;
+    spec *= bxdf.getAlbedo().xyz;
+
+    passResult.value += diff + spec;
+    passResult.diffuseIllumination += diff;
+    passResult.specularIllumination += spec;
+
+    result.finalValue += passResult.value;
+    result.effectiveRoughness += passResult.effectiveRoughness / max(1e-3f, luminance(passResult.value));
+    result.diffuseIllumination += passResult.diffuseIllumination;
+    result.specularIllumination += passResult.specularIllumination;
+    result.diffuseAlbedo = passResult.diffuseAlbedo;
+    result.specularAlbedo = passResult.specularAlbedo;
+}
+
+void evalQuadLight<let HasDiffuse:int, let HasSpecular:int, let HasDieletric:int, let HasEmisive:int>(
+    StandardPreparedMaterialData<HasDiffuse,HasSpecular,HasDieletric, HasEmisive>    bxdf,
     ShadingGeometry         geom,
     QuadLight               quadLight, 
     LightAttribs            lAttr,
