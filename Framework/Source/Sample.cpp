@@ -355,8 +355,8 @@ namespace Falcor
         {
             return;
         }
-        const int timingStartFrame = 30;
-        const int timingTotalFrames = 500;
+        const int timingStartFrame = 400;
+        const int timingTotalFrames = 200;
         LARGE_INTEGER startTime;
         QueryPerformanceCounter(&startTime);
         mFrameRate.newFrame();
