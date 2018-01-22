@@ -68,6 +68,8 @@ namespace Falcor
         */
         virtual void setIntoConstantBuffer(ConstantBuffer* pBuffer, size_t offset);
 
+        virtual void setResources(ParameterBlock* pBlock, std::string const& varName);
+
         /** Render UI elements for this light.
             \param[in] pGui The GUI to create the elements with
             \param[in] group Optional. If specified, creates a UI group to display elements within
@@ -163,7 +165,7 @@ namespace Falcor
         /** Set the light intensity.
             \param[in] intensity Vec3 corresponding to RGB intensity
         */
-        void setIntensity(const glm::vec3& intensity) { mData.intensity = intensity; }
+        void setIntensity(const glm::vec3& intensity) { mData.intensity = intensity; makeDirty(); }
         
         /** Set the light's world-space direction.
         */
@@ -195,7 +197,7 @@ namespace Falcor
 
     /** Quad light source.
     */
-    class QuadLight : public Light, public std::enable_shared_from_this<DirectionalLight>
+    class QuadLight : public Light, public std::enable_shared_from_this<QuadLight>
     {
     public:
         using SharedPtr = std::shared_ptr<QuadLight>;
@@ -208,6 +210,8 @@ namespace Falcor
         void worldParamsChanged();
         QuadLight();
         ~QuadLight();
+
+        virtual void setResources(ParameterBlock* pBlock, std::string const& varName) override;
 
         /** Render UI elements for this light.
         \param[in] pGui The GUI to create the elements with
@@ -223,10 +227,13 @@ namespace Falcor
         */
         void unloadGPUData() override;
 
+        virtual const char * getShaderTypeName() override { return "QuadLight"; };
+
+
         /** Set the light intensity.
         \param[in] intensity Vec3 corresponding to RGB intensity
         */
-        void setIntensity(const glm::vec3& intensity) { mData.intensity = intensity; }
+        void setIntensity(const glm::vec3& intensity) { mData.intensity = intensity; makeDirty(); }
 
         void setWorldDirection(const glm::vec3& dir) { mData.worldDir = dir;  worldParamsChanged(); }
 
@@ -254,6 +261,10 @@ namespace Falcor
 
         float mDistance = 1e3f; ///< Scene bounding radius is required to move the light position sufficiently far away
         vec3 mCenter;
+
+        // TODO: these should ideally be `static` so they can be shraed
+        Texture::SharedPtr texLtcMag, texLtcMat;
+        Sampler::SharedPtr linearSampler;
     };
 
     /** Simple infinitely-small point light with quadratic attenuation
@@ -484,8 +495,6 @@ namespace Falcor
         };
         std::string shaderTypeName;
         std::map<uint32_t, LightTypeInfo> lightTypes;
-        Texture::SharedPtr texLtcMag, texLtcMat;
-        Sampler::SharedPtr linearSampler;
 
         void merge(LightEnv const* lightEnv);
 
