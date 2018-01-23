@@ -207,6 +207,11 @@ namespace Falcor
 
     bool SceneRenderer::setPerMaterialData(const CurrentWorkingData& currentData, const Material* pMaterial)
     {
+        if (mpLastMaterial != pMaterial)
+        {
+            mpLastMaterial = pMaterial;
+            gEventCounter.numMaterialChanges++;
+        }
         currentData.pVars->setParameterBlock("gMaterial", pMaterial->getParameterBlock());
         return true;
     }
@@ -227,8 +232,6 @@ namespace Falcor
         }
         if(mpLastMaterial != pMesh->getMaterial().get())
         {   
-            mpLastMaterial = pMesh->getMaterial().get();
-            gEventCounter.numMaterialChanges++;
             if(mCompileMaterialWithProgram)
             {
                 MaterialSystem::patchProgram(currentData.pState->getProgram().get(), mpLastMaterial);

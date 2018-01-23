@@ -67,6 +67,23 @@ namespace Falcor
         return true;
     }
 
+    std::unordered_map<std::string, int> typeNameRegistry;
+
+    void ParameterBlock::setTypeName(std::string name)
+    {
+        typeName = name;
+        auto findRs = typeNameRegistry.find(name);
+        if (findRs != typeNameRegistry.end())
+            typeId = findRs->second;
+        typeId = (int)typeNameRegistry.size();
+        typeNameRegistry[name] = typeId;
+    }
+
+    std::string ParameterBlock::getTypeName() const
+    {
+        return typeName;
+    }
+
     ParameterBlock::~ParameterBlock() = default;
 
     ParameterBlock::AssignedResource::AssignedResource() : pResource(nullptr), type(DescriptorSet::Type::Count), pCB(nullptr)

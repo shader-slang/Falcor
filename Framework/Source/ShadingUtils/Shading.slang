@@ -184,6 +184,30 @@ struct DirectionalLight : ILight
     }
 };
 
+PassOutput initPassOutput()
+{
+    PassOutput passResult;
+    passResult.value = 0;
+    passResult.diffuseAlbedo = 0;
+    passResult.diffuseIllumination = 0;
+    passResult.specularAlbedo = 0;
+    passResult.specularIllumination = 0;
+    passResult.roughness = 0;
+    passResult.effectiveRoughness = 0;
+    return passResult;
+}
+
+void accumulateShadingResult(PassOutput passResult, inout ShadingOutput result)
+{
+    result.finalValue += passResult.value;
+    result.effectiveRoughness += passResult.effectiveRoughness / max(1e-3f, luminance(passResult.value));
+    result.diffuseIllumination += passResult.diffuseIllumination;
+    result.specularIllumination += passResult.specularIllumination;
+    result.diffuseAlbedo = passResult.diffuseAlbedo;
+    result.specularAlbedo = passResult.specularAlbedo;
+}
+
+//AREA_LIGHT_EXTENSION
 // Define an interface that reflectance functions must implement in order to
 // support illumination with quad light sources.
 interface IAcceptQuadLight
@@ -194,10 +218,10 @@ interface IAcceptQuadLight
 struct QuadLight : ILight
 {
     LightData light;
-
-Texture2D g_ltc_mat;
-Texture2D g_ltc_mag;
-SamplerState g_light_texSampler;
+    float3 points[4];
+    Texture2D g_ltc_mat;
+    Texture2D g_ltc_mag;
+    SamplerState g_light_texSampler;
 
     void evalLighting<TBxDF:IBRDF>(ShadingAttribsImpl<TBxDF> shAttr, float shadowFactor, inout ShadingOutput result)
     {
@@ -209,16 +233,14 @@ SamplerState g_light_texSampler;
 };
 
 // Make every BxDF have a new requirement: they must conform to `IAcceptQuadLight`
-extension IBRDF : IAcceptQuadLight
-{
-}
+extension IBRDF : IAcceptQuadLight { }
 
 // Implement the new requirement for the `PreparedMaterialData` type (the default BxDF)
 extension PreparedMaterialData
 {
     void acceptQuadLight(QuadLight quadLight, LightAttribs LAttr, ShadingGeometry geom, float shadowFactor, inout ShadingOutput result)
     {
-        evalQuadLight(this, geom, quadLight, LAttr, result);
+        evalQuadLightImpl(geom, quadLight, getRoughness(), LAttr.lightIntensity, false, getAlbedo().xyz, result);
     }
 }
 
@@ -227,7 +249,7 @@ extension StandardPreparedMaterialData<HasDiffuse,HasSpecular,HasDieletric, HasE
 {
     void acceptQuadLight(QuadLight quadLight, LightAttribs LAttr, ShadingGeometry geom, float shadowFactor, inout ShadingOutput result)
     {
-        evalQuadLight(this, geom, quadLight, LAttr, result);
+        evalQuadLightImpl(geom, quadLight, getRoughness(), LAttr.lightIntensity, false, getAlbedo().xyz, result);
     }
 }
 
@@ -236,12 +258,8 @@ extension StandardPreparedMaterialData<HasDiffuse,HasSpecular,HasDieletric, HasE
 #define LUT_SCALE (LUT_SIZE - 1.0)/LUT_SIZE
 #define LUT_BIAS 0.5/LUT_SIZE
 
-
 void evalAreaLight(float3 N, float3 V, float3 P, float roughness, float3 intensity, 
-                    float3 points[4], bool twoSided,
-    
-    QuadLight               quadLight, 
-    out float3 diffLighting, out float3 specLighting)
+    bool twoSided, QuadLight quadLight, out float3 diffLighting, out float3 specLighting)
 {
     float theta = acos(dot(N, V));
     float2 uv = float2(roughness, theta/(0.5*pi));
@@ -253,16 +271,15 @@ void evalAreaLight(float3 N, float3 V, float3 P, float roughness, float3 intensi
         float3(  0, t.z,   0),
         float3(t.w,   0, t.x)
     );
-    specLighting = intensity*LTC_Evaluate(N, V, P, Minv, points, twoSided);
+    specLighting = intensity*LTC_Evaluate(N, V, P, Minv, quadLight.points, twoSided);
     specLighting *= quadLight.g_ltc_mag.SampleBias(quadLight.g_light_texSampler, uv, 0.0).w;
     specLighting = float3(0.0f);
         
-    diffLighting = intensity*LTC_Evaluate(N, V, P, float3x3(1,0,0,0,1,0,0,0,1), points, twoSided); 
+    diffLighting = intensity*LTC_Evaluate(N, V, P, float3x3(1,0,0,0,1,0,0,0,1), quadLight.points, twoSided); 
 }
 
 float3 LTC_Evaluate(float3 N, float3 V, float3 P, float3x3 Minv, float3 points[4], bool twoSided)
 {
-        
     // construct orthonormal basis around N
     float3 T1, T2;
     T1 = normalize(V - N*dot(V, N));
@@ -430,7 +447,18 @@ void ClipQuadToHorizon(inout float3 L[5], out int n)
         L[4] = L[0];
 }
 
-
+void evalQuadLightImpl(ShadingGeometry geom, QuadLight quadLight, float roughness, float3 intensity, bool doubleSided, float3 albedo, inout ShadingOutput result)
+{
+    PassOutput passResult = initPassOutput();
+    float3 diff, spec;
+    evalAreaLight(geom.N, geom.E, geom.P, roughness, intensity, doubleSided, quadLight, diff, spec);
+    diff *= albedo.xyz;
+    spec *= albedo.xyz;
+    passResult.value += diff + spec;
+    passResult.diffuseIllumination += diff;
+    passResult.specularIllumination += spec;
+    accumulateShadingResult(passResult, result);
+}
 ////////////
 
 struct AmbientLight : ILight
@@ -1043,87 +1071,6 @@ void _fn evalDefaultMaterial(
     result.diffuseAlbedo = passResult.diffuseAlbedo;
     result.specularAlbedo = passResult.specularAlbedo;
 }
-
-void evalQuadLight(
-    PreparedMaterialData    bxdf,
-    ShadingGeometry         geom,
-    QuadLight               quadLight, 
-    LightAttribs            lAttr,
-    inout ShadingOutput     result)
-{
-    PassOutput passResult;
-    passResult.value = 0;
-    passResult.diffuseAlbedo = 0;
-    passResult.diffuseIllumination = 0;
-    passResult.specularAlbedo = 0;
-    passResult.specularIllumination = 0;
-    passResult.roughness = 0;
-    passResult.effectiveRoughness = 0;
-
-    float3 diff, spec;
-    evalAreaLight(geom.N, geom.E, geom.P, 
-        bxdf.getRoughness(), 
-        lAttr.lightIntensity, 
-        lAttr.points, false,
-        quadLight,
-        diff,
-        spec);
-
-    diff *= bxdf.getAlbedo().xyz;
-    spec *= bxdf.getAlbedo().xyz;
-
-    passResult.value += diff + spec;
-    passResult.diffuseIllumination += diff;
-    passResult.specularIllumination += spec;
-
-    result.finalValue += passResult.value;
-    result.effectiveRoughness += passResult.effectiveRoughness / max(1e-3f, luminance(passResult.value));
-    result.diffuseIllumination += passResult.diffuseIllumination;
-    result.specularIllumination += passResult.specularIllumination;
-    result.diffuseAlbedo = passResult.diffuseAlbedo;
-    result.specularAlbedo = passResult.specularAlbedo;
-}
-
-void evalQuadLight<let HasDiffuse:int, let HasSpecular:int, let HasDieletric:int, let HasEmisive:int>(
-    StandardPreparedMaterialData<HasDiffuse,HasSpecular,HasDieletric, HasEmisive>    bxdf,
-    ShadingGeometry         geom,
-    QuadLight               quadLight, 
-    LightAttribs            lAttr,
-    inout ShadingOutput     result)
-{
-    PassOutput passResult;
-    passResult.value = 0;
-    passResult.diffuseAlbedo = 0;
-    passResult.diffuseIllumination = 0;
-    passResult.specularAlbedo = 0;
-    passResult.specularIllumination = 0;
-    passResult.roughness = 0;
-    passResult.effectiveRoughness = 0;
-
-    float3 diff, spec;
-    evalAreaLight(geom.N, geom.E, geom.P, 
-        bxdf.getRoughness(), 
-        lAttr.lightIntensity, 
-        lAttr.points, false,
-        quadLight,
-        diff,
-        spec);
-
-    diff *= bxdf.getAlbedo().xyz;
-    spec *= bxdf.getAlbedo().xyz;
-
-    passResult.value += diff + spec;
-    passResult.diffuseIllumination += diff;
-    passResult.specularIllumination += spec;
-
-    result.finalValue += passResult.value;
-    result.effectiveRoughness += passResult.effectiveRoughness / max(1e-3f, luminance(passResult.value));
-    result.diffuseIllumination += passResult.diffuseIllumination;
-    result.specularIllumination += passResult.specularIllumination;
-    result.diffuseAlbedo = passResult.diffuseAlbedo;
-    result.specularAlbedo = passResult.specularAlbedo;
-}
-
 
 void _fn evalMaterial<TBRDF : IBRDF, TLight : ILight>(
     ShadingAttribsImpl<TBRDF> shAttr,

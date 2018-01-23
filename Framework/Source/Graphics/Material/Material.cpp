@@ -54,11 +54,13 @@ namespace Falcor
     Material::SharedPtr Material::create(const std::string& name)
     {
         Material* pMaterial = new Material(name);
+        gEventCounter.numMaterials++;
         return SharedPtr(pMaterial);
     }
 
     Material::~Material()
     {
+        gEventCounter.numMaterials--;
         removeDescIdentifier();
     }
     
@@ -608,7 +610,7 @@ namespace Falcor
                 << (hasSpecular ? "1" : "0") << ", "
                 << (hasDielectric ? "1" : "0") << ", "
                 << (hasEmisive ? "1" : "0") << ">";
-            mpParamBlock->typeName = strStream.str();
+            mpParamBlock->setTypeName(strStream.str());
         }
         Material::finalize();
     }

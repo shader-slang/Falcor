@@ -132,7 +132,6 @@ namespace Falcor
     public:
         using SharedPtr = std::shared_ptr<ProgramVersion>;
         using SharedConstPtr = std::shared_ptr<const ProgramVersion>;
-
         // SLANG-INTEGRATION:
         // ProgramVersion now holds a SlangCompileRequest
         // to support querying/creating new types and type layouts
@@ -181,7 +180,7 @@ namespace Falcor
         std::string                     mName;
 
         // Cached version of compiled kernels for this program version
-        mutable ProgramKernels::SharedPtr   mpKernels;
+        mutable std::unordered_map<int, ProgramKernels::SharedPtr> mpKernels;
     };
 
 }

@@ -159,12 +159,6 @@ inline LightAttribs _fn prepareLightAttribs(LightData Light, ShadingGeometry ShA
 
         LightAttr.lightIntensity *= Atten;
     }
-    if (Light.type == LightQuad)
-    {
-        for (int i = 0; i < 4; i++)
-            LightAttr.points[i] = Light.areaLightPoints[i].xyz;
-        LightAttr.lightIntensity = Light.intensity;
-    }
     // DISABLED_FOR_D3D12
 #if 0
     if (Light.type == LightArea)

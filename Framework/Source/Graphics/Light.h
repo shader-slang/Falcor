@@ -197,6 +197,7 @@ namespace Falcor
         vec3 mCenter;
     };
 
+    //AREA_LIGHT_EXTENSION
     /** Quad light source.
     */
     class QuadLight : public Light, public std::enable_shared_from_this<QuadLight>
@@ -209,10 +210,12 @@ namespace Falcor
 
         float width = 1.0f, height = 1.0f;
         float3 upDir = float3(0.0f, 1.0f, 0.0f);
+        float4          areaLightPoints[4];  // world space vertices for quad light
+
         void worldParamsChanged();
         QuadLight();
         ~QuadLight();
-
+        virtual void setIntoConstantBuffer(ConstantBuffer* pBuffer, size_t offset);
         virtual void setResources(ParameterBlock* pBlock, std::string const& varName) override;
 
         /** Render UI elements for this light.

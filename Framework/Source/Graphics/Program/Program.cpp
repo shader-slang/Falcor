@@ -498,7 +498,7 @@ namespace Falcor
                 auto newParamBlock = pVars->getParameterBlock(i);
                 if (typeArguments.size() <= index)
                     typeArguments.resize(index + 1);
-                typeArguments[index] = newParamBlock->typeName;
+                typeArguments[index] = newParamBlock->getTypeName();
             }
         }
 

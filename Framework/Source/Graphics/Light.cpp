@@ -259,7 +259,7 @@ namespace Falcor
         logError("DirectionalLight::move() is not used and thus not implemented for now.");
     }
 
-
+    //AREA_LIGHT_EXTENSION
     QuadLight::QuadLight() : mDistance(-1.0f)
     {
         mData.type = LightQuad;
@@ -280,6 +280,12 @@ namespace Falcor
 
     QuadLight::~QuadLight() = default;
 
+    void QuadLight::setIntoConstantBuffer(ConstantBuffer * pBuffer, size_t offset)
+    {
+        Light::setIntoConstantBuffer(pBuffer, offset);
+        pBuffer->setBlob(areaLightPoints, offset + sizeof(LightData), sizeof(float4) * 4);
+    }
+
     void QuadLight::setResources(ParameterBlock* pBlock, std::string const& varName)
     {
         pBlock->setTexture(varName + ".g_ltc_mat", texLtcMat);
@@ -292,10 +298,10 @@ namespace Falcor
         mData.worldDir = normalize(mData.worldDir);
         upDir = normalize(upDir);
         float3 right = normalize(cross(upDir, mData.worldDir));
-        mData.areaLightPoints[0] = float4(mData.worldPos - right * width * 0.5f - upDir * height * 0.5f, 1.0f);
-        mData.areaLightPoints[1] = float4(mData.worldPos + right * width * 0.5f - upDir * height * 0.5f, 1.0f);
-        mData.areaLightPoints[2] = float4(mData.worldPos + right * width * 0.5f + upDir * height * 0.5f, 1.0f);
-        mData.areaLightPoints[3] = float4(mData.worldPos - right * width * 0.5f + upDir * height * 0.5f, 1.0f);
+        areaLightPoints[0] = float4(mData.worldPos - right * width * 0.5f - upDir * height * 0.5f, 1.0f);
+        areaLightPoints[1] = float4(mData.worldPos + right * width * 0.5f - upDir * height * 0.5f, 1.0f);
+        areaLightPoints[2] = float4(mData.worldPos + right * width * 0.5f + upDir * height * 0.5f, 1.0f);
+        areaLightPoints[3] = float4(mData.worldPos - right * width * 0.5f + upDir * height * 0.5f, 1.0f);
         makeDirty();
     }
 
@@ -324,10 +330,10 @@ namespace Falcor
                 worldParamsChanged();
             }
             Light::renderUI(pGui);
-            pGui->addFloat4Var("points[0]", mData.areaLightPoints[0], -10000.0f, 1000.0f);
-            pGui->addFloat4Var("points[1]", mData.areaLightPoints[1], -10000.0f, 1000.0f);
-            pGui->addFloat4Var("points[2]", mData.areaLightPoints[2], -10000.0f, 1000.0f);
-            pGui->addFloat4Var("points[3]", mData.areaLightPoints[3], -10000.0f, 1000.0f);
+            pGui->addFloat4Var("points[0]", areaLightPoints[0], -10000.0f, 1000.0f);
+            pGui->addFloat4Var("points[1]", areaLightPoints[1], -10000.0f, 1000.0f);
+            pGui->addFloat4Var("points[2]", areaLightPoints[2], -10000.0f, 1000.0f);
+            pGui->addFloat4Var("points[3]", areaLightPoints[3], -10000.0f, 1000.0f);
             if (group)
             {
                 pGui->endGroup();
@@ -813,7 +819,7 @@ namespace Falcor
                 env->shaderTypeName = strStream.str();
             }
             mpParamBlock = ParameterBlock::create(spBlockReflection, true);
-            mpParamBlock->typeName = shaderTypeName;
+            mpParamBlock->setTypeName(shaderTypeName);
             // Note: the following logic used to be in the `SceneRenderer`,
             // and so some stuff doesn't translate directly (e.g., we don't
             // currently have a representation of ambient lights in the

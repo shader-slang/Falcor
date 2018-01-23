@@ -86,6 +86,7 @@
 #define LightDirectional     1    ///< Directional light source
 #define LightArea            2    ///< Area light source, potentially with arbitrary geometry
 // SLANG INTEGRATION
+//AREA_LIGHT_EXTENSION
 #define LightQuad            3    ///< Quad area light source
 
 //#define LightVolume        3    ///< Volumetric light source

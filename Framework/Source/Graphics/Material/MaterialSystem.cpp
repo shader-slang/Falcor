@@ -92,7 +92,8 @@ namespace Falcor
 //            if(pMaterialProg == nullptr)
             {
                 // Add the material desc
-                pProgram->addDefine("_MS_STATIC_MATERIAL_DESC", pMaterial->getMaterialDescStr());
+               // SLANG-INTEGRATION: remove this, we no longer need to use preprocessor to specialize
+                // pProgram->addDefine("_MS_STATIC_MATERIAL_DESC", pMaterial->getMaterialDescStr());
 
                
                 // Get the program version and set it into the map

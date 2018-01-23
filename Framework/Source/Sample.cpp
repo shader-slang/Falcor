@@ -480,7 +480,8 @@ namespace Falcor
                 << " paramUpd: " << gEventCounter.numParamBlockUpdates
                 << " dscTbls: " << gEventCounter.numDescriptorTables << " dscs: " << gEventCounter.numDescriptors
                 << "\nSetGraphicsRootDescriptorTable calls: " << gEventCounter.numSetRootDescriptorTableCalls
-                << " chunkSwitch: " << gEventCounter.numDescriptorChunkSwitches << " outOfChunks: " << gEventCounter.numOutOfChunks;
+                << " chunkSwitch: " << gEventCounter.numDescriptorChunkSwitches << " outOfChunks: " << gEventCounter.numOutOfChunks
+                << " numMaterials: " << gEventCounter.numMaterials;
         }
         return strstr.str();
     }

@@ -29,6 +29,7 @@
 #include "Graphics/Program/Program.h"
 #include "Graphics/Program/ProgramVersion.h"
 #include "Graphics/Material/MaterialSystem.h"
+#include "ProgramVars.h"
 
 namespace Falcor
 {
@@ -147,10 +148,16 @@ namespace Falcor
         // For now we just cache one copy of things, since specialization
         // based on `ProgramVars` isn't implemented yet.
         //
-
-        if( mpKernels )
+        int programKey = 0;
+        for (uint32_t i = 0; i < pVars->getParameterBlockCount(); i++)
         {
-            return mpKernels;
+            programKey ^= pVars->getParameterBlock(i)->getTypeId();
+            programKey <<= 8;
+        }
+        auto findRs = mpKernels.find(programKey);
+        if( findRs != mpKernels.end() )
+        {
+            return findRs->second;
         }
 
         // Loop so that user can trigger recompilation on error
@@ -161,7 +168,7 @@ namespace Falcor
             if( kernels )
             {
                 // Success.
-                mpKernels = kernels;
+                mpKernels[programKey] = kernels;
                 return kernels;
             }
             else
