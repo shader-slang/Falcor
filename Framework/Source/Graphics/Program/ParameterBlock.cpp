@@ -75,11 +75,8 @@ namespace Falcor
         auto findRs = typeNameRegistry.find(name);
         if (findRs != typeNameRegistry.end())
             typeId = findRs->second;
-        else
-        {
-            typeId = (int)typeNameRegistry.size();
-            typeNameRegistry[name] = typeId;
-        }
+        typeId = (int)typeNameRegistry.size();
+        typeNameRegistry[name] = typeId;
     }
 
     std::string ParameterBlock::getTypeName() const
@@ -155,9 +152,8 @@ namespace Falcor
         return SharedPtr(new ParameterBlock(pReflection, createBuffers));
     }
 
-    ParameterBlock::ParameterBlock(const ParameterBlockReflection::SharedConstPtr& pReflection, bool createBuffers)
-    {
-        mpReflector = pReflection;
+    ParameterBlock::ParameterBlock(const ParameterBlockReflection::SharedConstPtr& pReflection, bool createBuffers) : mpReflector(pReflection)
+    {   
         // SLANG-INTEGRATION
         // when creating parameter blocks, we also store the element type of the parameter block
         auto paramBlockType = pReflection->getType();
@@ -167,6 +163,8 @@ namespace Falcor
                 typeName = structType->getName();
             else if (auto genericType = paramBlockType->asGenericType())
                 typeName = genericType->name;
+            if (typeName == "TMaterial")
+                printf("break");
         }
         // Initialize the resource vectors
         const auto& setLayouts = pReflection->getDescriptorSetLayouts();

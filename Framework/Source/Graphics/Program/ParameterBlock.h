@@ -46,7 +46,6 @@ namespace Falcor
     public:
         // SLANG-INTEGRATION:
         // A ParameterBlock should hold a type name of the shader component
-        std::string genericTypeParamName, genericTypeArgumentName;
         void setTypeName(std::string name);
         std::string getTypeName() const;
         int getTypeId() const { return typeId; }

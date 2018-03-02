@@ -374,7 +374,6 @@ namespace Falcor
             slangFlags |= SLANG_COMPILE_FLAG_NO_CODEGEN;
 
         spSetCompileFlags(slangRequest, slangFlags);
-        spSetLineDirectiveMode(slangRequest, SLANG_LINE_DIRECTIVE_MODE_NONE);
 
         // Now lets add all our input shader code, one-by-one
         int translationUnitsAdded = 0;
@@ -510,13 +509,13 @@ namespace Falcor
         for (uint32_t i = 0; i < paramBlockCount; i++)
         {
             auto paramBlock = originalReflector->getParameterBlock(i);
-            auto newParamBlock = pVars->getParameterBlock(i);
-            if (newParamBlock->genericTypeParamName.length())
+            if (auto genType = paramBlock->getType()->asGenericType())
             {
-                auto index = originalReflector->getTypeParameterIndexByName(newParamBlock->genericTypeParamName);
+                auto index = originalReflector->getTypeParameterIndexByName(genType->name);
+                auto newParamBlock = pVars->getParameterBlock(i);
                 if (typeArguments.size() <= index)
                     typeArguments.resize(index + 1);
-                typeArguments[index] = newParamBlock->genericTypeArgumentName;
+                typeArguments[index] = newParamBlock->getTypeName();
             }
         }
 
