@@ -33,7 +33,10 @@
 cbuffer InternalPerFrameCB : register(b10)
 {
     CameraData gCamera;
-    float4x4 gCamVpAtLastCsmUpdate;
+    uint32_t gLightsCount;
+    float3 internalPerFrameCBPad;
+    LightData gLights[MAX_LIGHT_SOURCES];
+    LightProbeData gLightProbe;
 };
 
 cbuffer InternalPerMeshCB

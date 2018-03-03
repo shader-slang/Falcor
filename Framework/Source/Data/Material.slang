@@ -2,76 +2,14 @@
 
 import Interfaces;
 import BRDF;
+import TextureChannel;
 import Helpers;
 import Lights;
 
 // This file defines StandardMaterial, an implementation of the IMaterial interface
 
-interface IMaterialChannel
-{
-    float4 getValue(SamplerState s, float2 uv);
-    bool isUsed();
-}
-
-struct TextureChannel : IMaterialChannel
-{
-    Texture2D tex;
-    float4 getValue(SamplerState s, float2 uv)
-    {
-        return tex.Sample(s, uv);
-    }
-    bool isUsed() { return true; }
-};
-
-struct ConstantChannel : IMaterialChannel
-{
-    float4 val;
-    float4 getValue(SamplerState s, float2 uv)
-    {
-        return val;
-    }
-    bool isUsed() { return true; }
-};
-
-struct UnusedChannel : IMaterialChannel
-{
-    float4 getValue(SamplerState s, float2 uv)
-    {
-        return float4(0.0, 0.0, 0.0, 0.0);
-    }
-    bool isUsed() { return false; }
-};
-
-interface INormalMap
-{
-    void apply(SamplerState s, inout SurfaceGeometry geom);
-}
-
-struct NoNormalMap : INormalMap
-{
-    void apply(SamplerState s, inout SurfaceGeometry geom) {}
-};
-
-struct NormalMap<let IsRGB : int> : INormalMap
-{
-    Texture2D tex;
-
-    void apply(SamplerState s, inout SurfaceGeometry geom)
-    {
-        float3 mapN = tex.Sample(s, geom.uv).rgb;
-        if (IsRGB == 1)
-            mapN = RgbToNormal(mapN);
-        else
-            mapN = RgToNormal(mapN.rg);
-        // Apply the transformation. Everything is normalized already
-        geom.N = geom.T * mapN.x + geom.B * mapN.y + geom.N * mapN.z;
-        geom.B = normalize(geom.B - geom.N * dot(geom.B, geom.N));
-        geom.T = normalize(cross(geom.B, geom.N));
-    }
-};
-
 // this is what used to be the ShadingData class
-struct StandardBxDF<let DiffuseBrdf : int> : IBxDF
+struct StandardBxDF : IBxDF
 {
     // Pre-loaded texture data
     float3 diffuse;
@@ -96,9 +34,10 @@ struct StandardBxDF<let DiffuseBrdf : int> : IBxDF
         return opacity;
     }
 
-    ShadingResult eval(SurfaceGeometry geom, LightSample ls, float shadowFactor)
+    ShadingResult eval(SurfaceGeometry geom, LightData light, float shadowFactor)
     {
         ShadingResult sr = initShadingResult();
+        LightSample ls = evalLight(light, geom);
 
         // If the light doesn't hit the surface or we are viewing the surface from the back, return
         if(ls.NdotL <= 0 || geom.NdotV <= 0) return sr;
@@ -119,18 +58,10 @@ struct StandardBxDF<let DiffuseBrdf : int> : IBxDF
 
         return sr;
     }
-    ShadingResult evalAmbient(float3 ambientLight)
+    ShadingResult evalProbe(SurfaceGeometry geom, LightProbeData probe)
     {
         ShadingResult sr = initShadingResult();
-        sr.diffuse = diffuse * ambientLight;
-        sr.color.rgb = sr.diffuse;
-        sr.color.a = this.opacity;
-        return sr;
-    }
-    ShadingResult evalProbe(SurfaceGeometry geom, LightProbeData probe, GlobalLightParams gParams)
-    {
-        ShadingResult sr = initShadingResult();
-        LightSample ls = evalLightProbe(geom, probe, gParams.probeSampler, roughness, linearRoughness);
+        LightSample ls = evalLightProbe(geom, probe, roughness, linearRoughness);
 
         sr.diffuse = this.diffuse.rgb * ls.diffuse;
         sr.color.rgb = sr.diffuse;
@@ -141,12 +72,13 @@ struct StandardBxDF<let DiffuseBrdf : int> : IBxDF
     
     float3 evalDiffuseBrdf(float NdotV, LightSample ls)
     {
-        if (DiffuseBrdf == DiffuseBrdfLambert)
-            return evalDiffuseLambertBrdf(diffuse.rgb);
-        else if (DiffuseBrdf == DiffuseBrdfDisney)
-            return evalDiffuseDisneyBrdf(diffuse.rgb, NdotV, linearRoughness, ls);
-        else if (DiffuseBrdf == DiffuseBrdfFrostbite)
-            return evalDiffuseFrostbiteBrdf(diffuse.rgb, NdotV, linearRoughness, ls);
+    #if DiffuseBrdf == DiffuseBrdfLambert
+        return evalDiffuseLambertBrdf(diffuse.rgb);
+    #elif DiffuseBrdf == DiffuseBrdfDisney
+        return evalDiffuseDisneyBrdf(diffuse.rgb, NdotV, linearRoughness, ls);
+    #elif DiffuseBrdf == DiffuseBrdfFrostbite
+        return evalDiffuseFrostbiteBrdf(diffuse.rgb, NdotV, linearRoughness, ls);
+    #endif
     }
 
     float3 evalSpecularBrdf(float NdotV, LightSample ls)
@@ -158,9 +90,9 @@ struct StandardBxDF<let DiffuseBrdf : int> : IBxDF
     }
 };
 
-StandardBxDF<DiffuseBrdf> initStandardBxDF<let DiffuseBrdf : int>()
+StandardBxDF initStandardBxDF()
 {
-    StandardBxDF<DiffuseBrdf> rs;
+    StandardBxDF rs;
     rs.diffuse = 0;
     rs.opacity = 1;
     rs.specular = 0;
@@ -175,77 +107,52 @@ StandardBxDF<DiffuseBrdf> initStandardBxDF<let DiffuseBrdf : int>()
     return rs;
 }
 
-struct StandardMaterial <
-    TDiffuse : IMaterialChannel,  
-    TSpecular : IMaterialChannel,
-    TEmissive : IMaterialChannel,
-    TOcclusion : IMaterialChannel,
-    TLightMap : IMaterialChannel,
-    THeight : IMaterialChannel,
-    TNormal : INormalMap,
-    TAlphaTest : IAlphaTest,
-    let DiffuseBrdf : int
-    > : IMaterial
+struct StandardMaterial : IMaterial
 {
-    typedef StandardBxDF<DiffuseBrdf> BxDF;
-
+    typedef StandardBxDF BxDF;
     MaterialData materialData;
-    SamplerState samplerState;
 
-    TDiffuse diffuseChannel;
-    TSpecular specularChannel;
-    TEmissive emissiveChannel;
-    TOcclusion occlusionChannel;
-    TLightMap lightmapChannel;
-    THeight heightChannel;
-    TNormal normalMap;
-    TAlphaTest alphaTest;
-
-    ShadingPoint<BxDF> evalShadingPoint(VertexOut v, float3 camPosW)
+    ShadingPoint<StandardBxDF> evalShadingPoint(VertexOut v, float3 camPosW)
     {
-        ShadingPoint<BxDF> rs;
+        ShadingPoint<StandardBxDF> rs;
         
         SurfaceGeometry geom = initSurfaceGeometry();
 
-        BxDF sd = initStandardBxDF<DiffuseBrdf>();
+        StandardBxDF sd = initStandardBxDF();
 
         // Sample the diffuse texture and apply the alpha test
-        float4 diffuse = diffuseChannel.getValue(samplerState, v.texC);
-
+        float4 diffuse = sampleTexture(materialData.resources.diffuse, materialData.resources.samplerState, v.texC, materialData.diffuse, EXTRACT_DIFFUSE_TYPE(materialData.flags));
         sd.diffuse = diffuse.rgb;
-        sd.opacity = diffuse.a;
-        alphaTest.run(diffuse.a, materialData.alphaThreshold, v.posW);
+        sd.opacity = materialData.diffuse.a;
+        alphaTest(materialData.flags, diffuse.a, materialData.alphaThreshold, v.posW);
 
         geom.posW = v.posW;
-        geom.posH = v.posH;
         geom.uv = v.texC;
         geom.V = normalize(camPosW - v.posW);
         geom.N = normalize(v.normalW);
 
         geom.B = normalize(v.bitangentW - geom.N * (dot(v.bitangentW, geom.N)));
         geom.T = normalize(cross(geom.B, geom.N));
-        
-        geom.shadowDepthC = v.shadowsDepthC;
 
         // Sample the rest of the texture
-        float4 spec = specularChannel.getValue(samplerState, v.texC);
+        float4 spec = sampleTexture(materialData.resources.specular, materialData.resources.samplerState, v.texC, materialData.specular, EXTRACT_SPECULAR_TYPE(materialData.flags));
         sd.specular = spec.rgb;
         sd.linearRoughness = max(0.08, 1 - spec.a); // Clamp the roughness so that the BRDF won't explode
         sd.roughness = sd.linearRoughness * sd.linearRoughness;
-        sd.emissive = emissiveChannel.getValue(samplerState, v.texC).rgb;
+        sd.emissive = sampleTexture(materialData.resources.emissive, materialData.resources.samplerState, v.texC, float4(materialData.emissive, 1), EXTRACT_EMISSIVE_TYPE(materialData.flags)).rgb;
         sd.IoR = materialData.IoR;
         sd.doubleSidedMaterial = EXTRACT_DOUBLE_SIDED(materialData.flags);
 
-        sd.occlusion = occlusionChannel.getValue(samplerState, v.texC);
-        sd.lightMap = lightmapChannel.getValue(samplerState, v.lightmapC).rgb;
+        #define channel_type(extract) (extract(materialData.flags) ? ChannelTypeTexture : ChannelTypeUnused)
 
-        if (heightChannel.isUsed())
-        {
-            sd.height = heightChannel.getValue(samplerState, v.texC).xy;
-            sd.height = sd.height * materialData.heightScaleOffset.x + materialData.heightScaleOffset.y;
-        }
-
-        normalMap.apply(samplerState, geom);
+        sd.occlusion = sampleTexture(materialData.resources.occlusionMap, materialData.resources.samplerState, v.texC, 1, channel_type(EXTRACT_OCCLUSION_MAP));
+        sd.lightMap = sampleTexture(materialData.resources.lightMap, materialData.resources.samplerState, v.lightmapC, 1, channel_type(EXTRACT_LIGHT_MAP)).rgb;
+        sd.height = sampleTexture(materialData.resources.heightMap, materialData.resources.samplerState, v.texC, 1, channel_type(EXTRACT_HEIGHT_MAP)).xy;
+        sd.height = sd.height * materialData.heightScaleOffset.x + materialData.heightScaleOffset.y;
+        
+        #undef channel_type
+    
+        applyNormalMap(materialData, geom);
         geom.NdotV = dot(geom.N, geom.V);
 
         // Flip the normal if it's backfacing
@@ -261,6 +168,17 @@ struct StandardMaterial <
         return rs;
     }
 };
+
+/** Apply alpha-test
+*/
+void applyAlphaTest(MaterialData m, float alpha)
+{
+    if(EXTRACT_ALPHA_MODE(m.flags) == AlphaModeMask)
+    {
+        if(alpha < m.alphaThreshold) discard;
+    }
+}
+
 
 /** Convert RGB to normal
 */
@@ -281,4 +199,30 @@ float3 RgToNormal(float2 rg)
     n.z = saturate(dot(rg, rg)); // z = r*r + g*g
     n.z = sqrt(1 - n.z);
     return normalize(n);
+}
+
+/** Apply normal map
+*/
+void applyNormalMap(MaterialData m, inout SurfaceGeometry geom)
+{
+    uint mapType = EXTRACT_NORMAL_MAP_TYPE(m.flags);
+    if(mapType == NormalMapUnused) return;
+
+    float3 mapN = m.resources.normalMap.Sample(m.resources.samplerState, geom.uv).rgb;
+    switch(mapType)
+    {
+    case NormalMapRGB:
+        mapN = RgbToNormal(mapN);
+        break;
+    case NormalMapRG:
+        mapN = RgToNormal(mapN.rg);
+        break;
+    default:
+        return;
+    }
+
+    // Apply the transformation. Everything is normalized already
+    geom.N = geom.T * mapN.x + geom.B * mapN.y + geom.N * mapN.z;
+    geom.B = normalize(geom.B - geom.N * dot(geom.B, geom.N));
+    geom.T = normalize(cross(geom.B, geom.N));
 }

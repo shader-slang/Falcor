@@ -6,12 +6,10 @@ import Material;
 
 type_param TMaterial : IMaterial;
 
-type_param TLightCollection : ILight;
+//type_param TLightEnv : ILight;
 
 typedef ShadingPoint<TMaterial.BxDF> ShadingData;
 
 ParameterBlock<TMaterial> gMaterial;
 
-typedef LightEnv<TLightCollection> TLightEnvironment;
-
-ParameterBlock<TLightEnvironment> gLightEnv;
+//ParameterBlock<TLightEnv> gLightEnv;
