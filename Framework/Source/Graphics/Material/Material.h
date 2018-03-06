@@ -43,46 +43,6 @@ namespace Falcor
     class ProgramVars;
     class ConstantBuffer;
 
-    class MaterialChannel
-    {
-    public:
-        enum class Type
-        {
-            Unused, Constant, Texture
-        };
-        Type type = Type::Unused;
-        Texture::SharedPtr texture;
-        float4 constantValue;
-        MaterialChannel() = default;
-        MaterialChannel(Texture::SharedPtr tex)
-        {
-            type = Type::Texture;
-            texture = tex;
-        }
-        MaterialChannel(float4 val)
-        {
-            constantValue = val;
-            type = Type::Constant;
-        }
-        bool operator == (const MaterialChannel & other) const
-        {
-            if (type != other.type) return false;
-            if (type == Type::Texture)
-                return texture == other.texture;
-            else
-                return constantValue == other.constantValue;
-        }
-        bool operator != (const MaterialChannel & other) const
-        {
-            return !(*this == other);
-        }
-    };
-
-    enum class AlphaTestMode
-    {
-        Disabled, Basic, HashedIsotropic, HashedAnisotropic
-    };
-
     class Material : public std::enable_shared_from_this<Material>
     {
     public:
@@ -122,7 +82,7 @@ namespace Falcor
 
         /** Get the diffuse texture
         */
-        Texture::SharedPtr getDiffuseTexture() const { return diffuseChannel.texture; }
+        Texture::SharedPtr getDiffuseTexture() const { return mData.resources.diffuse; }
 
         /** Set the specular texture
         */
@@ -130,7 +90,7 @@ namespace Falcor
 
         /** Get the specular texture
         */
-        Texture::SharedPtr getSpecularTexture() const { return specularChannel.texture; }
+        Texture::SharedPtr getSpecularTexture() const { return mData.resources.specular; }
 
         /** Set the emissive texture
         */
@@ -138,7 +98,7 @@ namespace Falcor
 
         /** Get the emissive texture
         */
-        Texture::SharedPtr getEmissiveTexture() const { return emissiveChannel.texture; }
+        Texture::SharedPtr getEmissiveTexture() const { return mData.resources.emissive; }
 
         /** Set the shading model
         */
@@ -154,7 +114,7 @@ namespace Falcor
 
         /** Get the normal map
         */
-        Texture::SharedPtr getNormalMap() const { return normalMap.texture; }
+        Texture::SharedPtr getNormalMap() const { return mData.resources.normalMap; }
 
         /** Set the occlusion map
         */
@@ -162,7 +122,7 @@ namespace Falcor
 
         /** Get the occlusion map
         */
-        Texture::SharedPtr getOcclusionMap() const { return occlusionChannel.texture; }
+        Texture::SharedPtr getOcclusionMap() const { return mData.resources.occlusionMap; }
 
         /** Set the light map
         */
@@ -170,7 +130,7 @@ namespace Falcor
 
         /** Get the light map
         */
-        Texture::SharedPtr getLightMap() const { return lightmapChannel.texture; }
+        Texture::SharedPtr getLightMap() const { return mData.resources.lightMap; }
 
         /** Set the height map
         */
@@ -178,7 +138,7 @@ namespace Falcor
 
         /** Get the height map
         */
-        Texture::SharedPtr getHeightMap() const { return heightChannel.texture; }
+        Texture::SharedPtr getHeightMap() const { return mData.resources.heightMap; }
 
         /** Set the diffuse color
         */
@@ -186,7 +146,7 @@ namespace Falcor
 
         /** Get the diffuse color
         */
-        const vec4& getDiffuseColor() const { return diffuseChannel.constantValue; }
+        const vec4& getDiffuseColor() const { return mData.diffuse; }
 
         /** Set the specular color
         */
@@ -194,7 +154,7 @@ namespace Falcor
 
         /** Get the specular color
         */
-        const vec4& getSpecularColor() const { return specularChannel.constantValue; }
+        const vec4& getSpecularColor() const { return mData.specular; }
 
         /** Set the emissive color
         */
@@ -202,15 +162,15 @@ namespace Falcor
 
         /** Get the emissive color
         */
-        const vec3& getEmissiveColor() const { return *(vec3*)&(emissiveChannel.constantValue); }
+        const vec3& getEmissiveColor() const { return mData.emissive; }
 
         /** Set the alpha mode
         */
-        void setAlphaTestMode(AlphaTestMode mode);
+        void setAlphaMode(uint32_t alphaMode);
 
         /** Get the alpha mode
         */
-        AlphaTestMode getAlphaTestMode() const { return alphaTestMode; }
+        uint32_t getAlphaMode() const { return EXTRACT_ALPHA_MODE(mData.flags); }
 
         /** Set the double-sided flag. This flag doesn't affect the rasterizer state, just the shading
         */
@@ -227,17 +187,6 @@ namespace Falcor
         /** Get the alpha threshold
         */
         float getAlphaThreshold() const { return mData.alphaThreshold; }
-
-        void setHashedAlphaTestScale(float scale);
-        float getHashedAlphaTestScale() const { return hashedAlphaScale; }
-
-        /** Set the diffuse brdf
-        */
-        void setDiffuseBrdf(uint32_t brdf);
-
-        /** Get the diffuse brdf
-        */
-        uint32_t getDiffuseBrdf() const { return diffuseBrdf; }
 
         /** Get the flags
         */
@@ -273,31 +222,31 @@ namespace Falcor
 
         /** Get the sampler attached to the material
         */
-        Sampler::SharedPtr getSampler() const { return mSampler; }
+        Sampler::SharedPtr getSampler() const { return mData.resources.samplerState; }
 
+        /** Bind the material to a program variables object
+        */
+        void setIntoProgramVars(ProgramVars* pVars, ConstantBuffer* pCB, const char varName[]) const;
+        
         /** Get the ParameterBlock object for the material. Each material is created with a parameter-block. Using it is more efficient than assigning data to a custom constant-buffer.
         */
         ParameterBlock::SharedConstPtr getParameterBlock() const;
 
-    private:        
+        /** Set the material parameters into an existing parameter block.
+        */
+        void setIntoParameterBlock(ParameterBlock* pBlock, const std::string& varName) const;
+    private:
+        void updateDiffuseType();
+        void updateSpecularType();
+        void updateEmissiveType();
+        
         Material(const std::string& name);
         std::string mName;
-        uint32_t diffuseBrdf = DiffuseBrdfFrostbite;
-        MaterialChannel diffuseChannel, specularChannel, emissiveChannel;
-        MaterialChannel occlusionChannel, lightmapChannel, heightChannel, normalMap;
         MaterialData mData;
-        Sampler::SharedPtr mSampler;
-        AlphaTestMode alphaTestMode;
-        float hashedAlphaScale = 1.0f;
         mutable bool mParamBlockDirty = true;
-        mutable ParameterBlockReflection::SharedConstPtr spBlockReflection;
-        mutable std::string reflectionTypeName; // type name of current reflection data
-        mutable std::string shaderTypeName; // type name of parameter block
-        mutable ParameterBlock::SharedPtr mpParameterBlock;
+        ParameterBlock::SharedPtr mpParameterBlock;
         static uint32_t sMaterialCounter;
-        void setMaterialIntoBlockCommon(ParameterBlock* pBlock, ConstantBuffer* pCB, size_t offset, const std::string& varName) const;
-        void setIntoParameterBlock(ParameterBlock* pBlock, const std::string& varName) const;
-        uint32_t Material::getNormalMode(Texture::SharedPtr pNormalMap) const;
+        static ParameterBlockReflection::SharedConstPtr spBlockReflection;
     };
 
 #undef Texture2D

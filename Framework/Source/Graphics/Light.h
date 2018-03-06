@@ -40,8 +40,6 @@ namespace Falcor
 {
     class ConstantBuffer;
     class Gui;
-    class Scene;
-    class CascadedShadowMaps;
 
     // Sequential ID used to note that something has been changed
     typedef int64_t VersionID;
@@ -91,16 +89,15 @@ namespace Falcor
 
         /** Get the light type
         */
-        virtual uint32_t getTypeId() const = 0;
-        uint32_t getType() const { return getTypeId() & (~LightType_ShadowBit); }
+        uint32_t getType() const { return mData.type; }
+
+        /** Get the light Type
+        */
+        inline const LightData& getData() const { return mData; }
 
         /** Name the light
         */
         const void setName(const std::string& Name) { mName = Name; }
-
-        virtual void setSampler(const Sampler::SharedPtr& pSampler) {}
-
-        virtual vec3 getPosW() const { return glm::vec3(0.0f); }
 
         /** Get the light's name
         */
@@ -126,43 +123,18 @@ namespace Falcor
 
         std::string mName;
 
-        virtual void * getRawData() = 0;
-        virtual glm::vec3& getIntensityData() = 0;
-
         /* These two variables track mData values for consistent UI operation.*/
         glm::vec3 mUiLightIntensityColor = glm::vec3(0.5f, 0.5f, 0.5f);
         float     mUiLightIntensityScale = 1.0f;
+        LightData mData;
+
         VersionID mVersionID = 0;
         void makeDirty() { mVersionID++; }
     };
 
-    class InfinitesimalLight : public Light, public std::enable_shared_from_this<InfinitesimalLight>
-    {
-    protected:
-        bool isShadowed = false;
-        std::unique_ptr<CascadedShadowMaps> mCsm;
-        LightData mData;
-        virtual glm::vec3& getIntensityData() { return mData.intensity; }
-    public:
-        ~InfinitesimalLight();
-
-        /** Get the light's world-space direction.
-        */
-        const glm::vec3& getWorldDirection() const { return mData.dirW; }
-        void enableShadowMap(Scene* pScene, int width, int height, int numCascades);
-        void disableShadowMap();
-        CascadedShadowMaps* getCsm() { return mCsm.get(); }
-        bool getShadowed() const { return isShadowed; }
-        virtual vec3 getPosW() const override { return vec3(mData.posW.x, mData.posW.y, mData.posW.z); }
-        virtual void setIntoParameterBlock(ParameterBlock* pBlock, size_t offset, const std::string& varName) override;
-        void updateShadowParameters(ParameterBlock* pBlock, const std::string& varName);
-        virtual void renderUI(Gui* pGui, const char* group = nullptr);
-
-    };
-
     /** Directional light source.
     */
-    class DirectionalLight : public InfinitesimalLight, public std::enable_shared_from_this<DirectionalLight>
+    class DirectionalLight : public Light, public std::enable_shared_from_this<DirectionalLight>
     {
     public:
         using SharedPtr = std::shared_ptr<DirectionalLight>;
@@ -179,8 +151,6 @@ namespace Falcor
         */
         void renderUI(Gui* pGui, const char* group = nullptr) override;
 
-        virtual uint32_t getTypeId() const { return LightDirectional | (isShadowed ? LightType_ShadowBit : 0); ; }
-        
         /** Set the light's world-space direction.
         */
         void setWorldDirection(const glm::vec3& dir);
@@ -194,6 +164,10 @@ namespace Falcor
         */
         void setWorldParams(const glm::vec3& center, float radius);
 
+        /** Get the light's world-space direction.
+        */
+        const glm::vec3& getWorldDirection() const { return mData.dirW; }
+
         /** Get the light intensity.
         */
         const glm::vec3& getIntensity() const { return mData.intensity; }
@@ -206,19 +180,17 @@ namespace Falcor
         */
         void move(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up) override;
 
-        virtual const char * getShaderTypeName() override { return isShadowed ? "DirectionalLight<CsmShadow> " : "DirectionalLight<NoShadow> "; };
+        virtual const char * getShaderTypeName() override { return "DirectionalLight"; };
 
     private:
 
         float mDistance = 1e3f; ///< Scene bounding radius is required to move the light position sufficiently far away
         vec3 mCenter;
-    protected:
-        void * getRawData() override { return &mData; }
     };
 
     /** Simple infinitely-small point light with quadratic attenuation
     */
-    class PointLight : public InfinitesimalLight, public std::enable_shared_from_this<PointLight>
+    class PointLight : public Light, public std::enable_shared_from_this<PointLight>
     {
     public:
         using SharedPtr = std::shared_ptr<PointLight>;
@@ -235,8 +207,6 @@ namespace Falcor
         */
         void renderUI(Gui* pGui, const char* group = nullptr) override;
         
-        virtual uint32_t getTypeId() const { return LightPoint | (isShadowed ? LightType_ShadowBit : 0); }
-
         /** Get total light power (needed for light picking)
         */
         float getPower() const override;
@@ -287,9 +257,9 @@ namespace Falcor
         */
         void move(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up) override;
 
-        virtual const char * getShaderTypeName() override { return isShadowed?"PointLight<CsmShadow> " : "PointLight<NoShadow> "; };
-    protected:
-        void * getRawData() override { return &mData; }
+        virtual const char * getShaderTypeName() override { return "PointLight"; };
+
+    private:
     };
 
     /**
@@ -309,8 +279,6 @@ namespace Falcor
         AreaLight();
         ~AreaLight();
         
-        virtual uint32_t getTypeId() const { return LightArea; }
-
         /** Get total light power (needed for light picking)
         */
         float getPower() const override;
@@ -403,8 +371,6 @@ namespace Falcor
         */
         void move(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up) override;
 
-        virtual vec3 getPosW() const override { return vec3(mAreaLightData.posW.x, mAreaLightData.posW.y, mAreaLightData.posW.z); }
-
         /** Gets the size of a single light data struct in bytes
         */
         static uint32_t getShaderStructSize() { return kAreaLightDataSize; }
@@ -423,19 +389,15 @@ namespace Falcor
         Buffer::SharedPtr mpMeshCDFBuffer;  ///< Buffer for mesh Cumulative distribution function (CDF)
 
         std::vector<float> mMeshCDF; ///< CDF function for importance sampling a triangle mesh
-    protected:
-        void * getRawData() override { return &mAreaLightData; }
-        glm::vec3& getIntensityData() { return mAreaLightData.intensity; }
     };
 
     // Represent a lighting environment, which is effectively an array of lights
     class LightEnv : public std::enable_shared_from_this<LightEnv>
     {
-    private:
-        Sampler::SharedPtr lightProbeSampler;
     public:
         using SharedPtr = std::shared_ptr<LightEnv>;
         using SharedConstPtr = std::shared_ptr<const LightEnv>;
+
         static LightEnv::SharedPtr create();
         struct LightTypeInfo
         {
@@ -444,7 +406,7 @@ namespace Falcor
             size_t cbOffset = 0;
             std::vector<Light::SharedPtr> lights;
         };
-        std::string shaderTypeName, lightCollectionTypeName;
+        std::string shaderTypeName;
         std::map<uint32_t, LightTypeInfo> lightTypes;
 
         void merge(LightEnv const* lightEnv);
@@ -461,25 +423,25 @@ namespace Falcor
         This routine deletes area light(s) from the environment.
         */
         void deleteAreaLights();
-        void deleteLightProbes();
+
         /** Get the ParameterBlock object for the lighting environment.
         */
         ParameterBlock::SharedConstPtr getParameterBlock() const;
         void setIntoProgramVars(ProgramVars* vars);
-        void bindSampler(Sampler::SharedPtr sampler);
     private:
         LightEnv();
         LightEnv(LightEnv const&) = delete;
+
         std::vector<Light::SharedPtr> mpLights;
         mutable std::vector<VersionID> mLightVersionIDs;
 
         mutable VersionID mVersionID = 0;
-        mutable bool lightCollectionChanged = false;
         VersionID getVersionID() const;
 
         mutable ParameterBlock::SharedPtr mpParamBlock;
         mutable VersionID mParamBlockVersionID = -1;
-        mutable ParameterBlockReflection::SharedConstPtr spBlockReflection;
+        static ParameterBlockReflection::SharedConstPtr spBlockReflection;
+
         static size_t sLightCountOffset;
         static size_t sLightArrayOffset;
         static size_t sAmbientLightOffset;
