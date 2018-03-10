@@ -95,7 +95,14 @@ namespace Falcor
         */
         const vec3& getIntensity() const { return mData.intensity; }
 
+        /** Attach a sampler to the light-probe
+        */
+        virtual void setSampler(const Sampler::SharedPtr& pSampler) override { mData.resources.samplerState = pSampler; }
+
         float getPower() const { return 0.0f; }
+        /** Get the sampler state
+        */
+        const Sampler::SharedPtr& getSampler() const { return mData.resources.samplerState; }
 
         /** Bind the light-data into a ProgramVars object
         */
@@ -108,7 +115,7 @@ namespace Falcor
         static uint32_t getShaderStructSize() { return sizeof(LightProbeData); }
 
         virtual const char * getShaderTypeName() override { return "ProbeLight"; };
-        virtual uint32_t getTypeId() const override;
+        virtual uint32_t getType() const override;
         virtual void * getRawData() override { return &mData; }
 
     private:
