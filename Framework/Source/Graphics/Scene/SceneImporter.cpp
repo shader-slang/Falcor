@@ -328,7 +328,7 @@ namespace Falcor
             {
                 if (strcmp(value.GetString(), "true") == 0)
                 {
-                    pDirLight->enableShadowMap(&mScene, 2048, 2048, 4);
+                    pDirLight->enableShadowMap(Scene::SharedPtr(&mScene), 2048, 2048, 4);
                 }
             }
             else
@@ -398,9 +398,9 @@ namespace Falcor
             }
             else if (key == SceneKeys::kLightShadow)
             {
-                if (strcmp(value.GetString(), "true") == 0)
+                if (value.GetBool())
                 {
-                    pPointLight->enableShadowMap(&mScene, 2048, 2048, 1);
+                    pPointLight->enableShadowMap(Scene::SharedPtr(&mScene), 2048, 2048, 1);
                 }
             }
             else if(key == SceneKeys::kLightPos)
