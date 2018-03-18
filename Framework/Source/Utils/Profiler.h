@@ -57,6 +57,7 @@ namespace Falcor
     {
         int numRootSignatureChanges = 0;
         int numFlushes = 0;
+        int numGpuSyncs = 0, numCpuSyncs = 0;
         int numDescriptorHeapAllocations = 0;
         int numDrawCalls = 0;
         int numMaterialChanges = 0;
@@ -68,6 +69,8 @@ namespace Falcor
         int numMaterials = 0;
         void Clear()
         {
+            numGpuSyncs = 0;
+            numCpuSyncs = 0;
             numRootSignatureChanges = 0;
             numDescriptorHeapAllocations = 0;
             numDrawCalls = 0;
