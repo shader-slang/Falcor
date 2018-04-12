@@ -30,7 +30,7 @@
 #ifdef _DEBUG
 #define _LOG_ENABLED 1
 #else
-#define _LOG_ENABLED 0 // Set this to 1 to enable log messages in release builds
+#define _LOG_ENABLED 1 // Set this to 1 to enable log messages in release builds
 #endif 
 
 #define _PROFILING_ENABLED 1                // Set this to 1 to enable CPU/GPU profiling

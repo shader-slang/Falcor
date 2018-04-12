@@ -32,3 +32,5 @@ Framework/Externals/slang/source/**/*.natvis
 Framework/Externals/
 Media
 /Samples/FeatureDemo/times.txt
+/Falcor-slang.VC.VC.opendb
+/Falcor-slang.VC.db

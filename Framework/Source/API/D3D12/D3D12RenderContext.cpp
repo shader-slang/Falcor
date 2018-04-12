@@ -95,6 +95,10 @@ namespace Falcor
         releaseBlitData();
     }
 
+    void RenderContext::enableStablePowerState()
+    {
+        gpDevice->getApiHandle()->SetStablePowerState(true);
+    }
 
     RenderContext::SharedPtr RenderContext::create(CommandQueueHandle queue)
     {
@@ -294,6 +298,7 @@ namespace Falcor
         gEventCounter.numDrawCalls++;
         prepareForDraw();
         resourceBarrier(argBuffer, Resource::State::IndirectArg);
+        gEventCounter.numDrawCalls++;
         mpLowLevelData->getCommandList()->ExecuteIndirect(spDrawCommandSig, 1, argBuffer->getApiHandle(), argBufferOffset, nullptr, 0);
     }
 
@@ -302,6 +307,7 @@ namespace Falcor
         gEventCounter.numDrawCalls++;
         prepareForDraw();
         resourceBarrier(argBuffer, Resource::State::IndirectArg);
+        gEventCounter.numDrawCalls++;
         mpLowLevelData->getCommandList()->ExecuteIndirect(spDrawIndexCommandSig, 1, argBuffer->getApiHandle(), argBufferOffset, nullptr, 0);
     }
 

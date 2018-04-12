@@ -55,7 +55,7 @@ namespace Falcor
 
     struct EventCounter
     {
-        int numRootSignatureChanges = 0; 
+        int numRootSignatureChanges = 0;
         int numFlushes = 0;
         int numDescriptorHeapAllocations = 0;
         int numDrawCalls = 0;
@@ -65,7 +65,6 @@ namespace Falcor
         int numSetRootDescriptorTableCalls = 0;
         int numDescriptorChunkSwitches = 0;
         int numOutOfChunks = 0;
-        int numMaterials = 0;
         void Clear()
         {
             numRootSignatureChanges = 0;
