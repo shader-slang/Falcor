@@ -1,13 +1,12 @@
-#$rootPath = @("D:\git_repo\faclor-slang\falcor", "D:\git_repo\falcor-preslang\falcor")
-$mediaPath = $rootPath[0] + "\Media\Scenes\"
+#$rootPath = @("D:\git_repo\faclor-slang\falcor", "D:\git_repo\falcor-preslang-noarea\falcor", "D:\git_repo\falcor-preslang\falcor")
+$rootPath = @("D:\git_repo\falcor-preslang\falcor")
 
-$scenes = @("bumpyplane.fscene", "Bistro\Bistro_Interior.fscene", "Bistro\Bistro_Exterior.fscene", "SunTemple\SunTemple.fscene")
-$sceneNames = @("BumpyPlane", "Bistro_Int", "Bistro_Ext", "SunTemple")
+$mediaPath = "D:\packman-repo\chk\falcor_media\2.0\Scenes\"
 
-$scenes = @("..\san-miguel.fscene")
-$sceneNames = @("SanMiguel")
+$scenes = @( "Bistro\Bistro_Interior.fscene", "Bistro\Bistro_Exterior.fscene", "SunTemple\SunTemple.fscene")
+$sceneNames = @("Bistro_Int", "Bistro_Ext", "SunTemple")
+
 $resultFile = "benchmarkResult_arealight_oldfalcor.txt"
-$rootPath = @("D:\git_repo\falcor-preslang\falcor", "D:\git_repo\falcor-preslang-noarea\falcor")
 "" > $resultFile
 For ($i = 0; $i -lt $scenes.Length; $i++) {
     For ($j = 0; $j -lt $rootPath.Length; $j++) {
@@ -20,8 +19,11 @@ For ($i = 0; $i -lt $scenes.Length; $i++) {
         If ($j -eq 0) {
             Add-Content -Path $resultFile -Value "refactored " -NoNewline
         }
-        else {
+        elseif ($j -eq 1) {
             Add-Content -Path $resultFile -Value "original " -NoNewline
+        }
+        else {
+            Add-Content -Path $resultFile -Value "original+ls " -NoNewline
         }
         $line = Get-Content "times.txt"
         Add-Content -Path $resultFile -Value $line

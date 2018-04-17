@@ -65,6 +65,7 @@ namespace Falcor
         int numSetRootDescriptorTableCalls = 0;
         int numDescriptorChunkSwitches = 0;
         int numOutOfChunks = 0;
+        int numMaterials = 0;
         void Clear()
         {
             numRootSignatureChanges = 0;
@@ -77,6 +78,7 @@ namespace Falcor
             numSetRootDescriptorTableCalls = 0;
             numDescriptorChunkSwitches = 0;
             numOutOfChunks = 0;
+            numMaterials = 0;
         }
     };
 

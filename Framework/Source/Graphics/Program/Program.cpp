@@ -349,7 +349,7 @@ namespace Falcor
         // Don't actually perform semantic checking: just pass through functions bodies to downstream compiler
         slangFlags |= /*SLANG_COMPILE_FLAG_NO_CHECKING |*/ SLANG_COMPILE_FLAG_SPLIT_MIXED_TYPES;
 
-        slangFlags |= SLANG_COMPILE_FLAG_USE_IR;
+        //slangFlags |= SLANG_COMPILE_FLAG_USE_IR;
 
         // If we are compiling for reflection data only, skip code generation step 
         // so that the compiler does not complain about missing global type arguments 

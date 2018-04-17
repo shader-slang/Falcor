@@ -221,11 +221,11 @@ namespace Falcor
             mpDefaultPipelineState->setFbo(mpDefaultFBO);
             mpRenderContext = gpDevice->getRenderContext();
             mpRenderContext->setGraphicsState(mpDefaultPipelineState);
+            mpPixelZoom = PixelZoom::create(mpDefaultFBO.get());
 
             // Init the UI
             initUI();
 
-            mpPixelZoom = PixelZoom::create(mpDefaultFBO.get());
         }
         else
         {
