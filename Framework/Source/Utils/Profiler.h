@@ -55,8 +55,12 @@ namespace Falcor
 
     struct EventCounter
     {
+        float slangTime = 0.0f;
+        float hlslTime = 0.0f;
         int numRootSignatureChanges = 0;
         int numFlushes = 0;
+        int numLinks = 0;
+        int numKernels = 0;
         int numDescriptorHeapAllocations = 0;
         int numDrawCalls = 0;
         int numMaterialChanges = 0;

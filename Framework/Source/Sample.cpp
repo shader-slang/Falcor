@@ -480,6 +480,8 @@ namespace Falcor
             std::string msStr = std::to_string(msPerFrame);
             strstr.setf(std::ios::fixed, std::ios::floatfield);
             strstr.precision(3);
+            strstr << "HLSL: " << gEventCounter.hlslTime << " Slang: " << gEventCounter.slangTime << " Links: " << gEventCounter.numLinks << " "
+                << "Kernels: " << gEventCounter.numKernels << " ";
             strstr << "GPU: " << mGpuTime << ", ";
             strstr << std::to_string(int(ceil(1000 / msPerFrame))) + " FPS (" + msStr.erase(msStr.size() - 4) + " ms/frame)";
             if (mVsyncOn) strstr << std::string(", VSync");

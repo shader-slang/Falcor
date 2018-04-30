@@ -288,6 +288,26 @@ namespace Falcor
         }
     }
 
+    // SLANG-INTEGRATION:
+    void prepareSlangCompilationRequestForCodeGen(SlangCompileRequest* req, const std::vector<std::string> & typeArgs)
+    {
+        SlangCompileFlags slangFlags = 0;
+        slangFlags |= /*SLANG_COMPILE_FLAG_NO_CHECKING |*/ SLANG_COMPILE_FLAG_SPLIT_MIXED_TYPES;
+        
+        spSetCompileFlags(req, slangFlags);
+        std::vector<char const*> typeArgNames;
+        for (auto & name : typeArgs)
+            typeArgNames.push_back(name.c_str());
+        char const ** typeArgNamesPtr = nullptr;
+        if (typeArgNames.size())
+            typeArgNamesPtr = &typeArgNames[0];
+        // Now we make a separate pass and add the entry points.
+        // Each entry point references the index of the source
+        // it uses, and luckily, the Slang API can use these
+        // indices directly.
+        spSetGlobalTypeArgs(req, (int)typeArgs.size(),
+                typeArgNamesPtr);
+    }
 
     // SLANG-INTEGRATION:
     // createSlangCompileRequest now takes global type arguments for specialization
@@ -472,7 +492,11 @@ namespace Falcor
             CompilePurpose::ReflectionOnly,
             std::vector<std::string>());
 
+        CpuTimer cpuTimer;
+        auto start = cpuTimer.getCurrentTimePoint();
         int anyErrors = doSlangCompilation(slangRequest, log);
+        auto end = cpuTimer.getCurrentTimePoint();
+        gEventCounter.slangTime += cpuTimer.calcDuration(start, end);
         if(anyErrors)
             return nullptr;
 
@@ -502,11 +526,17 @@ namespace Falcor
             }
         }
 
-        SlangCompileRequest* slangRequest = createSlangCompileRequest(pVersion->getDefines(),
-            CompilePurpose::CodeGen,
-            typeArguments);
-
+        SlangCompileRequest* slangRequest = pVersion->slangRequest;
+        prepareSlangCompilationRequestForCodeGen(slangRequest, typeArguments);
+            //createSlangCompileRequest(pVersion->getDefines(),
+            //CompilePurpose::CodeGen,
+            //typeArguments);
+        CpuTimer cpuTimer;
+        auto start = cpuTimer.getCurrentTimePoint();
         int anyErrors = doSlangCompilation(slangRequest, log);
+        auto end = cpuTimer.getCurrentTimePoint();
+        gEventCounter.slangTime += cpuTimer.calcDuration(start, end);
+        gEventCounter.numKernels++;
         if(anyErrors)
             return nullptr;
 
@@ -536,11 +566,17 @@ namespace Falcor
 #endif
         }
 
-        spDestroyCompileRequest(slangRequest);
+        //spDestroyCompileRequest(slangRequest);
 
         // Now that we've preprocessed things, dispatch to the actual program creation logic,
         // which may vary in subclasses of `Program`
-        return createProgramKernels(log, shaderBlob);
+
+        start = cpuTimer.getCurrentTimePoint();
+        auto rs = createProgramKernels(log, shaderBlob);
+        end = cpuTimer.getCurrentTimePoint();
+        gEventCounter.hlslTime += cpuTimer.calcDuration(start, end);
+
+        return rs;
     }
 
     ProgramKernels::SharedPtr Program::createProgramKernels(std::string& log, const Shader::Blob shaderBlob[kShaderCount]) const
@@ -587,7 +623,7 @@ namespace Falcor
             // create the program
             std::string log;
             ProgramVersion::SharedConstPtr pProgram = preprocessAndCreateProgramVersion(log);
-
+            gEventCounter.numLinks++;
             if(pProgram == nullptr)
             {
                 std::string error = std::string("Program Linkage failed.\n\n");

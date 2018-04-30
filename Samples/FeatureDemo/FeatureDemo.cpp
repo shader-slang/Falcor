@@ -208,6 +208,9 @@ void FeatureDemo::loadScene(const std::string& filename, bool showProgressBar)
         initScene(pScene);
         applyCustomSceneVars(pScene.get(), filename);
     }
+    gEventCounter.slangTime = 0.0f;
+    gEventCounter.hlslTime = 0.0f;
+    gEventCounter.numLinks = 0;
 }
 
 void FeatureDemo::initSkyBox(const std::string& name)
